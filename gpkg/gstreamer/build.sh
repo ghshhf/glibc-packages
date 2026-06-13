@@ -34,11 +34,107 @@ termux_step_post_make_install() {
     
     # 创建默认的黑名单配置文件
     # 用户可以通过 gst-inspect-1.0 --print-blacklist 查看黑名单
-    # 这里创建一个空的黑名单文件，用户可以根据需要添加
+    # 这里创建一个配置文件，列出已知的黑名单插件
     cat > "${TERMUX_PREFIX}/etc/gstreamer-1.0/plugin-blacklist.conf" << EOF
 # GStreamer Plugin Blacklist Configuration
 # Use 'gst-inspect-1.0 --print-blacklist' to see blacklisted plugins
-# Add plugins to blacklist by uncommenting or adding new lines
-# Format: blacklist=<plugin-name>
+# 
+# To blacklist a plugin, add a line: blacklist=<plugin-name>
+# To remove from blacklist, delete: rm -f ~/.cache/gstreamer-1.0/plugin-cache-*
+
+# Known problematic plugins in glibc environment (disabled by default in build):
+# - dv (dependency issues)
+# - vpx (may cause issues on some architectures)
+# - x11-related (not needed in headless environment)
 EOF
+
+    # 创建帮助脚本：检查黑名单
+    mkdir -p "${TERMUX_PREFIX}/bin"
+    cat > "${TERMUX_PREFIX}/bin/gst-blacklist-manager" << 'HELPSCRIPT'
+#!/bin/bash
+
+show_help() {
+    cat << EOF
+GStreamer Blacklist Manager
+Usage: $0 [command]
+
+Commands:
+  check       - Check currently blacklisted plugins
+  clear       - Clear all blacklisted plugins (delete cache)
+  clear <plugin> - Remove specific plugin from blacklist
+  list-config - Show current blacklist configuration
+  help        - Show this help message
+
+Examples:
+  $0 check
+  $0 clear
+  $0 clear libdv
+EOF
+}
+
+check_blacklist() {
+    echo "=== GStreamer Blacklisted Plugins ==="
+    if command -v gst-inspect-1.0 &> /dev/null; then
+        gst-inspect-1.0 --print-blacklist 2>/dev/null || echo "No blacklisted plugins found."
+    else
+        echo "gst-inspect-1.0 not found. Make sure gstreamer is installed."
+    fi
+    echo ""
+    echo "=== Plugin Cache Location ==="
+    echo "$HOME/.cache/gstreamer-1.0/"
+    if [ -d "$HOME/.cache/gstreamer-1.0" ]; then
+        echo "Cache files:"
+        ls -la "$HOME/.cache/gstreamer-1.0/" 2>/dev/null || echo "  (none)"
+    else
+        echo "  (cache directory does not exist)"
+    fi
+}
+
+clear_blacklist() {
+    if [ -d "$HOME/.cache/gstreamer-1.0" ]; then
+        if [ -z "$1" ]; then
+            echo "Clearing all blacklisted plugins..."
+            rm -f "$HOME/.cache/gstreamer-1.0/plugin-cache-"*
+            echo "Done. Plugin cache cleared."
+        else
+            echo "Removing specific plugin from blacklist: $1"
+            # GStreamer doesn't have a direct way to remove specific plugin from blacklist
+            # User needs to delete the entire cache
+            echo "Note: GStreamer doesn't support removing specific plugins from blacklist."
+            echo "You need to clear the entire cache: $0 clear"
+        fi
+    else
+        echo "No blacklist cache found."
+    fi
+}
+
+list_config() {
+    echo "=== Blacklist Configuration ==="
+    if [ -f "${TERMUX_PREFIX}/etc/gstreamer-1.0/plugin-blacklist.conf" ]; then
+        cat "${TERMUX_PREFIX}/etc/gstreamer-1.0/plugin-blacklist.conf"
+    else
+        echo "Configuration file not found."
+    fi
+}
+
+case "$1" in
+    check)
+        check_blacklist
+        ;;
+    clear)
+        clear_blacklist "$2"
+        ;;
+    list-config)
+        list_config
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        show_help
+        exit 1
+        ;;
+esac
+HELPSCRIPT
+    chmod +x "${TERMUX_PREFIX}/bin/gst-blacklist-manager"
 }
