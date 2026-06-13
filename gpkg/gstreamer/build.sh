@@ -1,3 +1,4 @@
+TERMUX_PKG_NAME="gstreamer-glibc"
 TERMUX_PKG_HOMEPAGE="https://gstreamer.freedesktop.org/"
 TERMUX_PKG_DESCRIPTION="GStreamer open source multimedia framework core library"
 TERMUX_PKG_LICENSE="LGPL-2.1"
@@ -6,7 +7,7 @@ TERMUX_PKG_VERSION="1.28.4"
 TERMUX_PKG_SRCURL=https://gstreamer.freedesktop.org/src/gstreamer/gstreamer-${TERMUX_PKG_VERSION}.tar.xz
 TERMUX_PKG_SHA256=f5adc7e8f448c10260b3b25aa101c9d540674c8d9a54c2b77a86d04f2b3b50dd
 TERMUX_PKG_DEPENDS="glibc, libxml2-glibc, zlib-glibc, gnutls-glibc"
-TERMUX_PKG_BUILD_DEPENDS="meson, ninja, pkg-config, glibc-dev, libxml2-glibc-dev, zlib-glibc-dev"
+TERMUX_PKG_BUILD_DEPENDS="meson, ninja, pkg-config, glibc, libxml2-glibc, zlib-glibc"
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
 -D introspection=disabled
 -D check=disabled
