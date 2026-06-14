@@ -319,3 +319,41 @@ jobs:
             done
           done
         done
+
+  release:
+    permissions:
+      contents: write
+    if: github.event_name != 'pull_request' && github.ref_name == 'main'
+    needs: upload
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Clone repository
+      uses: actions/checkout@v4
+    - name: Download all built packages
+      uses: actions/download-artifact@v4.1.7
+      with:
+        pattern: pkgs-*-${{ github.sha }}
+        merge-multiple: true
+    - name: Prepare release assets
+      run: |
+        mkdir -p release-assets
+        for tarfile in pkgs-*.tar; do
+          arch=$(echo "$tarfile" | sed 's/pkgs-\(.*\)-[a-f0-9]\{40\}\.tar/\1/')
+          cp "$tarfile" "release-assets/pkgs-${arch}.tar"
+        done
+        # Generate release notes from built packages list
+        echo "## Built Packages" > release-notes.md
+        for tarfile in pkgs-*.tar; do
+          echo "### $(echo "$tarfile" | sed 's/pkgs-\(.*\)-.*/\1/')" >> release-notes.md
+          tar tf "$tarfile" | grep '\.pkg\.tar\..*$' | sed 's/^pkgs\///' | sort >> release-notes.md
+          echo "" >> release-notes.md
+        done
+    - name: Create GitHub Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME="build-$(date +%Y%m%d)-${GITHUB_SHA:0:7}"
+        gh release create "$TAG_NAME" \
+          --title "Build $(date +%Y-%m-%d)" \
+          --notes-file release-notes.md \
+          release-assets/*.tar
