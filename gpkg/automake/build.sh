@@ -1,0 +1,9 @@
+TERMUX_PKG_HOMEPAGE=https://www.gnu.org/software/automake/
+TERMUX_PKG_DESCRIPTION="GNU Automake"
+TERMUX_PKG_LICENSE="GPL-2.0"
+TERMUX_PKG_MAINTAINER="@termux-pacman"
+TERMUX_PKG_VERSION=1.18.1
+TERMUX_PKG_SRCURL=https://mirrors.kernel.org/gnu/automake/automake-${TERMUX_PKG_VERSION}.tar.xz
+TERMUX_PKG_SHA256=45393ebcc4f046a4708cd9ecd4e84ea57e96934e7b3f29635ad32da32f459c06
+TERMUX_PKG_DEPENDS="autoconf-glibc, perl-glibc"
+TERMUX_PKG_PLATFORM_INDEPENDENT=true
