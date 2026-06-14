@@ -14,7 +14,11 @@ on:
       packages:
         description: "A space-separated names of packages selected for rebuilding"
         required: true
-        
+
+concurrency:
+  group: gpkg-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions: {} # none
 
 jobs:
@@ -181,7 +185,14 @@ jobs:
         done
 
         if [ ! -z "$packages" ]; then
-          if grep -qP "(^|\s)${packages// /($|\s)|(^|\s)}($|\s)" ./big-pkgs.list; then
+          big_found=false
+          for pkg in $packages; do
+            if grep -qxF "$pkg" ./big-pkgs.list; then
+              big_found=true
+              break
+            fi
+          done
+          if $big_found; then
             ./scripts/setup-ubuntu.sh
             ./scripts/setup-cgct.sh
             sudo apt install ninja-build
@@ -233,10 +244,8 @@ jobs:
       contents: read
     if: github.event_name != 'pull_request'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
-      matrix:
-        arch: [aarch64, arm, i686, x86_64]
       fail-fast: false
     steps:
     - name: Clone repository

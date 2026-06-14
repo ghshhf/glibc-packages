@@ -15,9 +15,15 @@ on:
         description: "A space-separated names of packages selected for rebuilding"
         required: true
 
+concurrency:
+  group: cgct-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {} # none
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
@@ -41,7 +47,10 @@ jobs:
               if [ -d "${il[0]}/${il[1]}" ]; then
                 if [ ! -f pkgs/cgct-need.txt ] || ! $(grep -q "^${il[1]}$" pkgs/cgct-need.txt); then
                   echo "${il[1]}" >> pkgs/cgct-need.txt
-                  curl -L "https://raw.githubusercontent.com/termux-pacman/glibc-packages/$(git log -n 2 --format=format:%H cgct/${il[1]} | tail -1)/cgct/${il[1]}/PKGBUILD" -o pkgs/PKGBUILDs/${il[1]}
+                  parent_hash=$(git log -n 2 --format=format:%H cgct/${il[1]} | tail -1)
+                  if [ -n "$parent_hash" ]; then
+                    curl -L "https://raw.githubusercontent.com/termux-pacman/glibc-packages/${parent_hash}/cgct/${il[1]}/PKGBUILD" -o pkgs/PKGBUILDs/${il[1]}
+                  fi
                 fi
               else
                 echo "${il[1]}" >> pkgs/deleted_cgct_packages.txt
@@ -74,7 +83,7 @@ jobs:
   upload:
     if: github.event_name != 'pull_request'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - name: Clone repository
       uses: actions/checkout@v4
