@@ -91,3 +91,20 @@
 ## 许可证
 
 MIT License
+## 📊 包统计
+
+本仓库目前包含 **304+ 个软件包**定义，涵盖：
+
+- 编译器与解释器（gcc, clang, llvm, rust, python, perl, nodejs）
+- 构建工具（cmake, meson, ninja, make, autoconf, automake）
+- 核心库（glibc, zlib, zstd, openssl, libxml2）
+- 系统工具（coreutils, bash, htop, vim, git, curl）
+- 压缩与归档（zlib, zstd, xz, brotli, bzip2）
+- 图形与 GUI（libx11, libxcb, mesa, vulkan, sdl2）
+- 多媒体（ffmpeg, gstreamer, libopus）
+- 数据库（sqlite, mariadb, postgresql）
+- 网络与协议（curl, wget, openssh, openldap）
+
+完整包列表请查看 [`gpkg/`](https://github.com/ghshhf/glibc-packages/tree/main/gpkg) 目录。
+
+> **注意**: 虽然定义了 304+ 个包，但大部分尚未经过完整测试。我们建议先从已测试的包开始（如 `zlib`, `ncurses`, `neofetch`, `libxml2`）。
