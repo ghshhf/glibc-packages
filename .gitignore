@@ -19,3 +19,9 @@ cross-build/
 # 编辑器目录
 .vscode/
 .idea/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
