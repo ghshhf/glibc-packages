@@ -1,27 +1,20 @@
 {
+  "repo": "glibc-packages",
+  "owner": "ghshhf",
+  "description": "Cross-platform package build system with public API access",
+  "homepage": "https://github.com/ghshhf/glibc-packages",
   "pkg_format": "pacman",
   "gpkg": {
     "name": "gpkg",
     "distribution": "gpkg",
     "component": "gpkg",
-    "url": "https://sync.termux-pacman.dev/gpkg"
+    "url": "https://raw.githubusercontent.com/ghshhf/glibc-packages/master/gpkg"
   },
-  "packages": {
-    "name": "main",
-    "distribution": "main",
-    "component": "main",
-    "url": "https://sync.termux-pacman.dev/main"
-  },
-  "x11-packages": {
-    "name": "x11",
-    "distribution": "x11",
-    "component": "x11",
-    "url": "https://sync.termux-pacman.dev/x11"
-  },
-  "root-packages": {
-    "name": "root",
-    "distribution": "root",
-    "component": "root",
-    "url": "https://sync.termux-pacman.dev/root"
+  "scripts": {
+    "validate_format": "scripts/validate/format.py",
+    "validate_links": "scripts/validate/links.py",
+    "build_cross": "build-cross.sh",
+    "build_package": "build-package.sh",
+    "install_deps": "install-deps.sh"
   }
 }

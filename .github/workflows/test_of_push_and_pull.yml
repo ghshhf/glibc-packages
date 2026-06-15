@@ -1,0 +1,40 @@
+name: Validate Format
+
+on:
+  push:
+    paths:
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'scripts/validate/**'
+      - 'scripts/tests/**'
+  pull_request:
+    paths:
+      - 'README.md'
+      - 'CONTRIBUTING.md'
+      - 'scripts/validate/**'
+      - 'scripts/tests/**'
+
+jobs:
+  format-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+
+      - name: Run format validation
+        run: |
+          python scripts/validate/format.py README.md
+
+      - name: Run unit tests
+        run: |
+          python -m pytest scripts/tests/test_validate_format.py -v
