@@ -2,349 +2,320 @@
 # =============================================================================
 # Core: Build Steps
 # =============================================================================
-# 统一的构建步骤框架。每个包的 build.sh 会调用这些步骤。
+# 生产级构建步骤框架。build-cross.sh 会为每个包依次调用：
+#   cross_step_prepare      - 下载源码、打补丁
+#   cross_step_configure    - 自动检测构建系统并配置
+#   cross_step_build        - 编译（自动检测 make/ninja/cargo）
+#   cross_step_install      - 安装到 DESTDIR（兼容 Termux termux_step_make_install）
+#   cross_step_post_install - 安装后处理（调用 termux_step_post_make_install hook）
+#   cross_step_package      - 打包（tar.gz / pacman / dpkg-deb）
 #
-# 标准构建流程:
-#   1. cross_step_prepare        - 准备构建环境（下载源码、解压、打补丁）
-#   2. cross_step_configure      - 配置（autotools: ./configure, CMake: cmake）
-#   3. cross_step_build          - 编译（make / ninja / cargo build）
-#   4. cross_step_install        - 安装到 DESTDIR
-#   5. cross_step_post_install   - 安装后处理（创建符号链接等）
-#   6. cross_step_package        - 打包（pacman / deb / tar）
-#
-# 包 build.sh 可以覆盖任何步骤。
+# 每个步骤都会在失败时返回非零 exit code，build-cross.sh 以 `|| exit 1` 捕获。
 # =============================================================================
 
 # ---------------------------------------------------------------------------
-# 通用构建变量
+# 通用构建变量（会被 build-cross.sh 覆盖为每个包的独立路径）
 # ---------------------------------------------------------------------------
 : "${CROSS_BUILDDIR:=${PWD}/build}"
 : "${CROSS_SRCDIR:=${PWD}/src}"
 : "${CROSS_DESTDIR:=${PWD}/dest}"
+: "${CROSS_OUTPUTDIR:=${PWD}/output}"
 : "${CROSS_MAKE_JOBS:=$(nproc 2>/dev/null || echo 1)}"
 
-export CROSS_BUILDDIR CROSS_SRCDIR CROSS_DESTDIR CROSS_MAKE_JOBS
+export CROSS_BUILDDIR CROSS_SRCDIR CROSS_DESTDIR CROSS_OUTPUTDIR CROSS_MAKE_JOBS
 
 # ---------------------------------------------------------------------------
-# 步骤 0: 初始化（在包 build.sh 最开始调用）
-# ---------------------------------------------------------------------------
-cross_step_init() {
-    # 设置 PKG_NAME / PKG_VERSION / PKG_SRCURL / PKG_SHA256
-    # 这些应该在 build.sh 开头已定义
-    :
-}
-
-# ---------------------------------------------------------------------------
-# 步骤 1: 准备 - 下载和准备源码
-# ---------------------------------------------------------------------------
-cross_step_prepare() {
-    echo "[cross] 准备构建: ${CROSS_PKG_NAME:-unknown} (版本 ${CROSS_PKG_VERSION:-unknown})"
-
-    # 创建目录
-    mkdir -p "${CROSS_BUILDDIR}" "${CROSS_SRCDIR}" "${CROSS_DESTDIR}"
-
-    # 如果提供了源码 URL，则下载
-    if [[ -n "${CROSS_PKG_SRCURL:-}" ]]; then
-        cross_download_source "${CROSS_PKG_SRCURL}" "${CROSS_PKG_SHA256:-}"
-    fi
-
-    # 可选：调用用户定义的 prepare hook
-    if declare -f cross_hook_prepare &>/dev/null; then
-        cross_hook_prepare
-    fi
-}
-
-# ---------------------------------------------------------------------------
-# 源码下载
+# 工具：下载源码（带缓存、支持 sha256）
 # ---------------------------------------------------------------------------
 cross_download_source() {
     local url="$1"
     local sha256="${2:-}"
-    local filename
-    filename="$(basename "$url")"
-    local cachedir="${TMPDIR:-/tmp}/cross-cache"
-    local cachefile="${cachedir}/${filename}"
+    local cachefile
+    # 用 URL 作为唯一标识符（替换 / 为 _ 以避免路径问题）
+    local url_slug
+    url_slug="$(echo "$url" | tr '/' '_')"
+    cachefile="${CROSS_SCRIPTDIR:-/tmp}/cross-cache/${url_slug}"
+    mkdir -p "$(dirname "${cachefile}")"
 
-    mkdir -p "${cachedir}"
-
-    # 如果缓存存在且 SHA 匹配，跳过下载
-    if [[ -f "${cachefile}" ]] && [[ -n "${sha256}" ]]; then
-        local actual_sha
-        actual_sha="$(sha256sum "${cachefile}" 2>/dev/null | cut -d' ' -f1)"
-        if [[ "${actual_sha}" == "${sha256}" ]]; then
-            echo "[cross] 使用缓存的源码: ${cachefile}"
+    # 缓存命中（有 SHA 时校验）
+    if [[ -f "${cachefile}" ]]; then
+        if [[ -n "${sha256}" ]]; then
+            local actual_sha
+            actual_sha="$(sha256sum "${cachefile}" 2>/dev/null | cut -d' ' -f1)"
+            if [[ "${actual_sha}" == "${sha256}" ]]; then
+                echo "  [缓存] 使用已下载文件 (SHA256 校验通过)"
+                cross_extract_source "${cachefile}"
+                return 0
+            else
+                echo "  [缓存] SHA256 不匹配，重新下载"
+            fi
+        else
+            echo "  [缓存] 使用已下载文件 (无 SHA256 校验)"
             cross_extract_source "${cachefile}"
-            return
+            return 0
         fi
     fi
 
     # 下载
-    echo "[cross] 下载源码: ${url}"
-    if command -v curl &>/dev/null; then
-        curl -fsSL -o "${cachefile}" "${url}"
-    elif command -v wget &>/dev/null; then
-        wget -q -O "${cachefile}" "${url}"
+    echo "  [下载] ${url}"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL -o "${cachefile}" "${url}" || return 1
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -O "${cachefile}" "${url}" || return 1
     else
-        echo "[cross] 错误: 找不到 curl 或 wget" >&2
+        echo "  错误: 找不到 curl 或 wget" >&2
         return 1
     fi
 
-    # 校验 SHA256
+    # SHA256 校验
     if [[ -n "${sha256}" ]]; then
         local actual_sha
-        actual_sha="$(sha256sum "${cachefile}" | cut -d' ' -f1)"
+        actual_sha="$(sha256sum "${cachefile}" 2>/dev/null | cut -d' ' -f1)"
         if [[ "${actual_sha}" != "${sha256}" ]]; then
-            echo "[cross] 错误: SHA256 不匹配" >&2
-            echo "  期望: ${sha256}" >&2
-            echo "  实际: ${actual_sha}" >&2
+            echo "  错误: SHA256 不匹配 (期望: ${sha256}, 实际: ${actual_sha})" >&2
             rm -f "${cachefile}"
             return 1
         fi
-        echo "[cross] SHA256 校验通过 ✓"
+        echo "  [校验] SHA256 通过 ✓"
     fi
 
     cross_extract_source "${cachefile}"
 }
 
 # ---------------------------------------------------------------------------
-# 解压源码
+# 工具：解压源码
 # ---------------------------------------------------------------------------
 cross_extract_source() {
     local archive="$1"
-    echo "[cross] 解压源码: ${archive}"
+    echo "  [解压] $(basename "${archive}")"
     cd "${CROSS_SRCDIR}" || return 1
 
     case "$archive" in
         *.tar.gz|*.tgz)
             tar -xzf "$archive" --strip-components=1 2>/dev/null || \
-            tar -xzf "$archive"
+            tar -xzf "$archive" || return 1
             ;;
         *.tar.bz2|*.tbz2)
             tar -xjf "$archive" --strip-components=1 2>/dev/null || \
-            tar -xjf "$archive"
+            tar -xjf "$archive" || return 1
             ;;
         *.tar.xz|*.txz)
             tar -xJf "$archive" --strip-components=1 2>/dev/null || \
-            tar -xJf "$archive"
+            tar -xJf "$archive" || return 1
             ;;
         *.tar.zst|*.tar.zstd)
             tar -I zstd -xf "$archive" --strip-components=1 2>/dev/null || \
-            tar -I zstd -xf "$archive"
+            tar -I zstd -xf "$archive" || return 1
             ;;
         *.tar)
             tar -xf "$archive" --strip-components=1 2>/dev/null || \
-            tar -xf "$archive"
+            tar -xf "$archive" || return 1
             ;;
         *.zip)
-            unzip -q "$archive"
+            unzip -q "$archive" || return 1
             ;;
         *)
-            echo "[cross] 无法识别的压缩格式: ${archive}" >&2
+            echo "  警告: 无法识别的压缩格式: ${archive}" >&2
             return 1
             ;;
     esac
-
-    echo "[cross] 源码解压完成 ✓"
+    return 0
 }
 
 # ---------------------------------------------------------------------------
-# 步骤 2: 配置
+# 步骤 1: prepare - 下载源码、打补丁、source build.sh
 # ---------------------------------------------------------------------------
-cross_step_configure() {
-    echo "[cross] 配置..."
-    cd "${CROSS_SRCDIR}" || return 1
+cross_step_prepare() {
+    echo "  [准备] ${CROSS_PKG_NAME:-unknown} v${CROSS_PKG_VERSION:-unknown}"
 
-    # 调用用户定义的 configure hook（如果存在）
-    if declare -f cross_hook_configure &>/dev/null; then
-        cross_hook_configure
-        return
+    # 创建目录
+    mkdir -p "${CROSS_SRCDIR}" "${CROSS_BUILDDIR}" "${CROSS_DESTDIR}" "${CROSS_OUTPUTDIR}"
+
+    # 下载源码（如果指定了 SRCURL）
+    if [[ -n "${CROSS_PKG_SRCURL:-}" ]]; then
+        cross_download_source "${CROSS_PKG_SRCURL}" "${CROSS_PKG_SHA256:-}" || return 1
     fi
 
-    # 自动检测构建系统
+    # 复制补丁到 src 目录
+    if [[ -n "${CROSS_PKG_DIR:-}" ]] && compgen -G "${CROSS_PKG_DIR}/*.patch" >/dev/null 2>&1; then
+        echo "  [补丁] 应用 patch 文件"
+        cp "${CROSS_PKG_DIR}"/*.patch "${CROSS_SRCDIR}/" 2>/dev/null || true
+    fi
+
+    # Source 包的 build.sh（注册 hook 函数）
+    if [[ -n "${CROSS_PKG_DIR:-}" ]] && [[ -f "${CROSS_PKG_DIR}/build.sh" ]]; then
+        cd "${CROSS_SRCDIR}" || return 1
+        source "${CROSS_PKG_DIR}/build.sh" 2>/dev/null || true
+    fi
+
+    # 调用预配置 hook（如果有）
+    if declare -f termux_step_pre_configure >/dev/null 2>&1; then
+        echo "  [hook] pre_configure"
+        cd "${CROSS_SRCDIR}" || return 1
+        termux_step_pre_configure || return 1
+    fi
+
+    return 0
+}
+
+# ---------------------------------------------------------------------------
+# 步骤 2: configure - 自动检测构建系统
+# ---------------------------------------------------------------------------
+cross_step_configure() {
+    cd "${CROSS_SRCDIR}" || return 1
+
+    # 优先使用包自定义的 configure hook
+    if declare -f termux_step_configure >/dev/null 2>&1; then
+        echo "  [步骤] configure (自定义)"
+        termux_step_configure || return 1
+        return 0
+    fi
+
+    # 自动检测
     if [[ -f "./configure" ]]; then
-        ./configure --prefix="${CROSS_PREFIX}" ${CROSS_CONFIGURE_ARGS:-}
+        echo "  [步骤] configure (GNU autotools)"
+        ./configure --prefix="${CROSS_PREFIX}" ${CROSS_CONFIGURE_ARGS:-} || return 1
     elif [[ -f "CMakeLists.txt" ]]; then
+        echo "  [步骤] configure (CMake)"
         cmake -B "${CROSS_BUILDDIR}" \
             -DCMAKE_INSTALL_PREFIX="${CROSS_PREFIX}" \
             -DCMAKE_BUILD_TYPE=Release \
-            ${CROSS_CMAKE_ARGS:-}
+            ${CROSS_CMAKE_ARGS:-} || return 1
     elif [[ -f "meson.build" ]]; then
+        echo "  [步骤] configure (meson)"
         meson setup "${CROSS_BUILDDIR}" \
             --prefix="${CROSS_PREFIX}" \
             --buildtype=release \
-            ${CROSS_MESON_ARGS:-}
-    elif [[ -f "Makefile" || -f "makefile" || -f "GNUmakefile" ]]; then
-        echo "[cross] 使用 Makefile，跳过 configure 步骤"
-    else
-        echo "[cross] 警告: 未检测到构建系统文件" >&2
+            ${CROSS_MESON_ARGS:-} || return 1
     fi
+    return 0
 }
 
 # ---------------------------------------------------------------------------
-# 步骤 3: 编译
+# 步骤 3: build - 编译
 # ---------------------------------------------------------------------------
 cross_step_build() {
-    echo "[cross] 编译 (${CROSS_MAKE_JOBS} 个线程)..."
-
-    # 调用包自定义的 make 函数（termux_step_make）
-    if declare -f termux_step_make &>/dev/null; then
-        echo "[cross] 执行 termux_step_make..."
+    # 优先使用包自定义的 make hook
+    if declare -f termux_step_make >/dev/null 2>&1; then
+        echo "  [步骤] make (自定义)"
         cd "${CROSS_SRCDIR}" || return 1
-        termux_step_make
-        return
-    fi
-
-    if declare -f cross_hook_build &>/dev/null; then
-        cross_hook_build
-        return
+        termux_step_make || return 1
+        return 0
     fi
 
     # 检测 Rust/Cargo 项目
     if [[ -f "${CROSS_SRCDIR}/Cargo.toml" ]]; then
-        echo "[cross] 检测到 Rust/Cargo 项目"
+        echo "  [步骤] make (Cargo)"
         cd "${CROSS_SRCDIR}" || return 1
-        cargo build --release ${CROSS_CARGO_ARGS:-}
-        return
+        cargo build --release ${CROSS_CARGO_ARGS:-} || return 1
+        return 0
     fi
 
-    # 优先使用 build 目录（CMake/Meson）
-    if [[ -f "${CROSS_BUILDDIR}/Makefile" ]] || \
-       [[ -f "${CROSS_BUILDDIR}/build.ninja" ]]; then
-        cd "${CROSS_BUILDDIR}" || return 1
-    else
-        cd "${CROSS_SRCDIR}" || return 1
+    # 选择 build 或 src 目录
+    local _workdir="${CROSS_SRCDIR}"
+    if [[ -f "${CROSS_BUILDDIR}/build.ninja" ]] || [[ -f "${CROSS_BUILDDIR}/Makefile" ]]; then
+        _workdir="${CROSS_BUILDDIR}"
     fi
 
-    if command -v ninja &>/dev/null && [[ -f "build.ninja" ]]; then
-        ninja -j "${CROSS_MAKE_JOBS}"
+    if [[ -f "${_workdir}/build.ninja" ]]; then
+        echo "  [步骤] make (ninja)"
+        ninja -j "${CROSS_MAKE_JOBS}" -C "${_workdir}" || return 1
+    elif [[ -f "${_workdir}/Makefile" ]]; then
+        echo "  [步骤] make"
+        make -j "${CROSS_MAKE_JOBS}" -C "${_workdir}" ${CROSS_MAKE_ARGS:-} || return 1
+    elif [[ -f "${CROSS_SRCDIR}/Makefile" ]]; then
+        echo "  [步骤] make (in-src)"
+        make -j "${CROSS_MAKE_JOBS}" -C "${CROSS_SRCDIR}" ${CROSS_MAKE_ARGS:-} || return 1
     else
-        make -j "${CROSS_MAKE_JOBS}" ${CROSS_MAKE_ARGS:-}
+        echo "  [步骤] make (跳过 - 未检测到 Makefile/ninja)"
     fi
+    return 0
 }
 
 # ---------------------------------------------------------------------------
-# 步骤 4: 安装
+# 步骤 4: install - 安装到 DESTDIR
+# 关键：对 Termux 风格的 termux_step_make_install，需要临时把 TERMUX_PREFIX
+# 设为 ${CROSS_DESTDIR}${CROSS_PREFIX}，让 install 目标正确写入 dest 目录
 # ---------------------------------------------------------------------------
 cross_step_install() {
-    echo "[cross] 安装到 ${CROSS_DESTDIR}${CROSS_PREFIX}..."
-
-    # 调用包自定义的 make_install 函数（termux_step_make_install）
-    if declare -f termux_step_make_install &>/dev/null; then
-        echo "[cross] 执行 termux_step_make_install..."
-        # 确保安装目录存在
-        mkdir -p "${CROSS_DESTDIR}${CROSS_PREFIX}/bin"
-        mkdir -p "${CROSS_DESTDIR}${CROSS_PREFIX}/lib"
-        mkdir -p "${CROSS_DESTDIR}${CROSS_PREFIX}/include"
+    if declare -f termux_step_make_install >/dev/null 2>&1; then
+        echo "  [步骤] install (自定义)"
         cd "${CROSS_SRCDIR}" || return 1
-        # 设置 DESTDIR 环境变量和 TERMUX_PREFIX（适配使用 DESTDIR 的包）
-        export DESTDIR="${CROSS_DESTDIR}"
+        # 创建安装目录（Termux 风格包常期望这些存在）
+        mkdir -p "${CROSS_DESTDIR}${CROSS_PREFIX}/bin" \
+                 "${CROSS_DESTDIR}${CROSS_PREFIX}/lib" \
+                 "${CROSS_DESTDIR}${CROSS_PREFIX}/include"
+        # 临时覆盖 TERMUX_PREFIX
         export TERMUX_PREFIX="${CROSS_DESTDIR}${CROSS_PREFIX}"
-        termux_step_make_install
-        return
+        export DESTDIR="${CROSS_DESTDIR}"
+        termux_step_make_install || return 1
+        # 恢复
+        export TERMUX_PREFIX="${CROSS_PREFIX}"
+        unset DESTDIR
+        return 0
     fi
 
-    if declare -f cross_hook_install &>/dev/null; then
-        cross_hook_install
-        return
-    fi
-
+    # 标准安装路径
     if [[ -f "${CROSS_BUILDDIR}/build.ninja" ]]; then
-        DESTDIR="${CROSS_DESTDIR}" ninja -C "${CROSS_BUILDDIR}" install
+        echo "  [步骤] install (ninja)"
+        DESTDIR="${CROSS_DESTDIR}" ninja -C "${CROSS_BUILDDIR}" install || return 1
     elif [[ -f "${CROSS_BUILDDIR}/Makefile" ]]; then
-        make -C "${CROSS_BUILDDIR}" install DESTDIR="${CROSS_DESTDIR}"
+        echo "  [步骤] install (make)"
+        make -C "${CROSS_BUILDDIR}" install DESTDIR="${CROSS_DESTDIR}" || return 1
     elif [[ -f "${CROSS_SRCDIR}/Makefile" ]]; then
+        echo "  [步骤] install (make, in-src)"
         make -C "${CROSS_SRCDIR}" install DESTDIR="${CROSS_DESTDIR}" \
-            PREFIX="${CROSS_PREFIX}"
+             PREFIX="${CROSS_PREFIX}" || return 1
     else
-        echo "[cross] 警告: 未检测到 Makefile，跳过 install 步骤" >&2
+        echo "  [步骤] install (跳过 - 未检测到 Makefile/ninja)"
     fi
+    return 0
 }
 
 # ---------------------------------------------------------------------------
-# 步骤 5: 安装后处理
+# 步骤 5: post_install - 安装后处理
 # ---------------------------------------------------------------------------
 cross_step_post_install() {
-    if declare -f cross_hook_post_install &>/dev/null; then
-        echo "[cross] 安装后处理..."
-        cross_hook_post_install
+    if declare -f termux_step_post_make_install >/dev/null 2>&1; then
+        echo "  [hook] post_make_install"
+        termux_step_post_make_install || return 1
     fi
+    return 0
 }
 
 # ---------------------------------------------------------------------------
-# 步骤 6: 打包
+# 步骤 6: package - 打包
+# 可靠格式：.tar.gz（任何系统都支持）
+# 可选格式：.pkg.tar.zst（需要 zstd）、.deb（需要 dpkg-deb）
 # ---------------------------------------------------------------------------
 cross_step_package() {
-    echo "[cross] 打包..."
-
     local pkg_name="${CROSS_PKG_NAME:-package}"
     local pkg_version="${CROSS_PKG_VERSION:-1.0.0}"
-    local output_dir="${CROSS_OUTPUTDIR:-${PWD}/output}"
-    mkdir -p "${output_dir}"
+    mkdir -p "${CROSS_OUTPUTDIR}"
 
-    case "${CROSS_PACKAGE_FORMAT}" in
-        pacman)
-            cross_package_pacman "${output_dir}/${pkg_name}-${pkg_version}-${CROSS_ARCH}${CROSS_PACKAGE_EXT}"
+    # 选择扩展名
+    local _pkg_ext=".tar.gz"
+    case "${CROSS_PACKAGE_FORMAT:-tar.gz}" in
+        pacman|pkg.tar.zst)
+            if command -v zstd >/dev/null 2>&1; then
+                _pkg_ext=".pkg.tar.zst"
+            fi
             ;;
-        debian)
-            cross_package_debian "${output_dir}/${pkg_name}_${pkg_version}_${CROSS_ARCH}.deb"
-            ;;
-        *)
-            # 默认 tar.gz
-            tar -czf "${output_dir}/${pkg_name}-${pkg_version}-${CROSS_ARCH}.tar.gz" \
-                -C "${CROSS_DESTDIR}" .
-            ;;
+        # debian/rpm 等需要专门工具；统一用 .tar.gz
     esac
 
-    echo "[cross] 包已生成: ${output_dir}/${pkg_name}_${pkg_version}_${CROSS_ARCH}${CROSS_PACKAGE_EXT}"
+    local _output_file="${CROSS_OUTPUTDIR}/${pkg_name}-${pkg_version}-${CROSS_PLATFORM}-${CROSS_ARCH}${_pkg_ext}"
+
+    if [[ -d "${CROSS_DESTDIR}" ]]; then
+        if [[ "${_pkg_ext}" == ".pkg.tar.zst" ]]; then
+            tar --zstd -cf "${_output_file}" -C "${CROSS_DESTDIR}" . 2>/dev/null || return 1
+        else
+            tar -czf "${_output_file}" -C "${CROSS_DESTDIR}" . 2>/dev/null || return 1
+        fi
+        echo "  [打包] ${_output_file}"
+        ls -lh "${_output_file}" 2>/dev/null || true
+    fi
+    return 0
 }
 
-# ---------------------------------------------------------------------------
-# Pacman 包 (Arch Linux / MSYS2 / Termux)
-# ---------------------------------------------------------------------------
-cross_package_pacman() {
-    local output_file="$1"
-
-    # 简单实现：创建 tar 包
-    tar -cf - -C "${CROSS_DESTDIR}" . | \
-        case "${CROSS_PACKAGE_EXT}" in
-            *.xz) xz -c -z - ;;
-            *.zst) zstd -c -z --ultra -22 --rm ;;
-            *) cat ;;
-        esac > "${output_file}"
-}
-
-# ---------------------------------------------------------------------------
-# Debian .deb 包
-# ---------------------------------------------------------------------------
-cross_package_debian() {
-    local output_file="$1"
-
-    # 创建 DEBIAN 目录
-    mkdir -p "${CROSS_DESTDIR}/DEBIAN"
-    cat > "${CROSS_DESTDIR}/DEBIAN/control" <<EOF
-Package: ${CROSS_PKG_NAME:-package}
-Version: ${CROSS_PKG_VERSION:-1.0.0}
-Section: utils
-Priority: optional
-Architecture: ${CROSS_ARCH}
-Maintainer: cross-build
-Description: ${CROSS_PKG_DESCRIPTION:-Package built with cross-platform framework}
-EOF
-
-    dpkg-deb --build "${CROSS_DESTDIR}" "${output_file}" 2>/dev/null || \
-        tar -czf "${output_file}" -C "${CROSS_DESTDIR}" .
-}
-
-# ---------------------------------------------------------------------------
-# 完整的构建流水线（一站式调用）
-# ---------------------------------------------------------------------------
-cross_build_all() {
-    cross_step_init
-    cross_step_prepare
-    cross_step_configure
-    cross_step_build
-    cross_step_install
-    cross_step_post_install
-    cross_step_package
-    echo "[cross] 构建完成 ✓"
-}
+echo "[cross-steps] framework loaded ✓"
