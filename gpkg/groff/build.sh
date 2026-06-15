@@ -1,0 +1,9 @@
+TERMUX_PKG_HOMEPAGE=https://www.gnu.org/software/groff/
+TERMUX_PKG_DESCRIPTION="GNU troff text-formatting system"
+TERMUX_PKG_LICENSE="GPL-3.0-or-later"
+TERMUX_PKG_MAINTAINER="@termux-pacman"
+TERMUX_PKG_VERSION=1.23.0
+TERMUX_PKG_SRCURL=https://ftp.gnu.org/gnu/groff/groff-${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=6b9757f592b7518b4902eb6af7e54570bdccba37a871fddb2d30ae3863511c13
+TERMUX_PKG_DEPENDS="glibc"
+TERMUX_PKG_BUILD_IN_SRC=true
