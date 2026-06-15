@@ -1,83 +1,62 @@
-# Glibc packages for termux
+# glibc-packages
 
-![Build gpkg](https://github.com/termux-pacman/glibc-packages/workflows/Build%20gpkg/badge.svg)
-![Build cgct](https://github.com/termux-pacman/glibc-packages/workflows/Build%20cgct/badge.svg)
-![GitHub repo size](https://img.shields.io/github/repo-size/termux-pacman/glibc-packages)
+为 Termux 构建基于 glibc 的软件包仓库，现已扩展支持跨平台构建（Linux/Android/Windows/macOS/BSD）。
 
-This repository stores and compiles **glibc-based packages** for Termux, providing an alternative to the default bionic libc environment.
+## 功能特性
 
-## Quick start
+- **跨平台支持**: 支持 Linux、Android、Windows、macOS、BSD 等多个平台
+- **多架构支持**: x86_64、aarch64、i686、arm 等架构
+- **自动工具链选择**: 根据平台自动选择 GCC、Clang、MinGW 等工具链
+- **依赖名称映射**: 将 glibc-packages 的 `xxx-glibc` 命名转换为各平台原生包名
+- **灵活的构建流程**: 支持 autotools、Cmake、Rust/Cargo 等多种构建系统
 
-Add the repository to your Termux pacman configuration:
+## 快速开始
 
-```
-[gpkg]
-Server = https://service.termux-pacman.dev/gpkg/$arch
-```
-
-Then install packages:
+### 构建单个包
 
 ```bash
-pacman -S htop tmux python mesa
+# 构建 neofetch 包
+./build-cross.sh gpkg/neofetch
+
+# 清理并重新构建
+./build-cross.sh --clean gpkg/neofetch
 ```
 
-## Package structure
+### 支持的包
+
+| 包名 | 类型 | 状态 |
+|------|------|------|
+| neofetch | 纯脚本 | ✅ |
+| zlib | configure | ✅ |
+| time | autotools | ✅ |
+| htop | autotools + ncurses | ✅ |
+| sd | Rust/Cargo | ✅ |
+
+## 项目结构
 
 ```
-gpkg/              — Main package repository (~250 packages)
-  <package>/       — Each package has its own directory
-    build.sh       — Package build recipe (required)
-    *.patch        — Optional patches
-    *.subpackage.sh — Optional subpackage definitions
-cgct/              — Cross-compilation toolchain (binutils, GCC, glibc, headers)
-scripts-cgct/      — Build scripts for the cross toolchain
-.github/workflows/ — CI workflows for building and publishing packages
+├── build-cross.sh          # 跨平台构建主入口
+├── cross-platform/         # 跨平台框架模块
+│   ├── platform-detect.sh  # 平台检测与配置
+│   ├── platforms/          # 平台配置文件
+│   ├── toolchains/         # 工具链配置
+│   └── core/               # 核心模块
+└── gpkg/                   # 包定义目录
+    ├── neofetch/
+    ├── zlib/
+    ├── time/
+    ├── htop/
+    └── sd/
 ```
 
-### build.sh format
+## 支持的平台
 
-```bash
-TERMUX_PKG_HOMEPAGE=https://example.com
-TERMUX_PKG_DESCRIPTION="Description of the package"
-TERMUX_PKG_LICENSE="GPL-3.0"
-TERMUX_PKG_MAINTAINER="@termux-pacman"
-TERMUX_PKG_VERSION=1.2.3
-TERMUX_PKG_SRCURL=https://example.com/pkg-${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=abc123...
-TERMUX_PKG_DEPENDS="glibc, ncurses-glibc"
-```
+- Linux (x86_64, aarch64, i686)
+- Android (aarch64, arm)
+- Windows (x86_64, i686) - MinGW
+- macOS (x86_64, arm64)
+- BSD (FreeBSD, OpenBSD)
 
-Key points:
-- Dependency names use the `-glibc` suffix (e.g., `ncurses-glibc`, `readline-glibc`)
-- Build systems supported: autotools, CMake (`TERMUX_PKG_FORCE_CMAKE=true`), Meson
-- See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines
+## 许可证
 
-## Supported architectures
-
-| Architecture | Support |
-|-------------|---------|
-| aarch64     | ✅ |
-| arm         | ✅ |
-| x86_64      | ✅ |
-| i686        | ✅ |
-
-## Build locally
-
-```bash
-# Install build dependencies
-./get-build-package.sh
-
-# Build a single package for your architecture
-./build-package.sh -I -a x86_64 --format pacman --library glibc <package-name>
-```
-
-## Links
-
-- [Termux Pacman](https://termux-pacman.dev/) — package repository and build infrastructure
-- [Contribution guide](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
-- [Wiki](https://github.com/termux-pacman/glibc-packages/wiki)
-
-## License
-
-[MIT](LICENSE.md) © termux-pacman
+MIT License

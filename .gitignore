@@ -1,10 +1,21 @@
-build-package.sh
-clean.sh
+# 构建产物目录
+cross-build/
 
-/packages/
-/x11-packages/
-/root-packages/
-/scripts/
-/ndk-patches/
-/output/
-/termux-packages/
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# 日志文件
+*.log
+
+# 压缩包
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+
+# 编辑器目录
+.vscode/
+.idea/
