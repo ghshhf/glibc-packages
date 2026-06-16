@@ -1,51 +1,24 @@
-#!/bin/bash
-# ai-tp-gateway build script for glibc-packages
-set -e
+TERMUX_PKG_HOMEPAGE=https://github.com/ghshhf/glibc-packages
+TERMUX_PKG_DESCRIPTION="AI-TP gateway library"
+TERMUX_PKG_LICENSE="MIT"
+TERMUX_PKG_MAINTAINER="@ghshhf"
+TERMUX_PKG_VERSION=0.1.0
+# 无 SRCURL：源码在项目根目录 ai-tp-gateway/ 下
+TERMUX_PKG_DEPENDS="glibc"
+TERMUX_PKG_BUILD_IN_SRC=true
 
-PKG_NAME="ai-tp-gateway"
-PKG_VERSION="1.0.0"
-PKG_DIR="$(cd "$(dirname "$0")/../.." && pwd)/${PKG_NAME}"
-
-echo "=== Building ${PKG_NAME} v${PKG_VERSION} ==="
-
-check_dep() {
-    if ! command -v "$1" &>/dev/null; then
-        echo "Error: $1 not found. Please install $2."
-        exit 1
-    fi
+termux_step_configure() {
+	# 从项目根目录复制源码到构建目录
+	local src_root="$(cd "${CROSS_PKG_DIR}/../ai-tp-gateway" && pwd)"
+	cp -r "${src_root}/"* "${TERMUX_PKG_SRCDIR}/"
 }
 
-check_dep gcc "GCC compiler"
-check_dep make "GNU Make"
-check_dep ar   "binutils"
+termux_step_make() {
+	gcc -Wall -Wextra -Iinclude -c src/ai-tp-gateway.c -o ai-tp-gateway.o
+	ar rcs libai-tp-gateway.a ai-tp-gateway.o
+}
 
-if [ ! -d "${PKG_DIR}" ]; then
-    echo "Error: ${PKG_DIR} not found."
-    exit 1
-fi
-
-if [ ! -f "${PKG_DIR}/include/ai-tp-gateway.h" ]; then
-    echo "Error: ai-tp-gateway.h not found."
-    exit 1
-fi
-
-cd "${PKG_DIR}"
-make clean 2>/dev/null || true
-make all
-
-if [ -f libaitp-gateway.a ]; then
-    echo "  Build OK: libaitp-gateway.a"
-else
-    echo "  Build FAILED"
-    exit 1
-fi
-
-echo "  Running tests..."
-if make test; then
-    echo "  Tests PASSED"
-else
-    echo "  Tests FAILED"
-    exit 1
-fi
-
-echo "=== ${PKG_NAME} v${PKG_VERSION} build complete ==="
+termux_step_make_install() {
+	install -Dm644 libai-tp-gateway.a "${TERMUX_PREFIX}/lib/libai-tp-gateway.a"
+	install -Dm644 include/ai-tp-gateway.h "${TERMUX_PREFIX}/include/ai-tp-gateway.h"
+}

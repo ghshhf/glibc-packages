@@ -1,23 +1,24 @@
-#!/bin/bash
-# Build script for ai-tp-address
-set -e
-echo "Building ai-tp-address..."
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-SRC_DIR="${PROJECT_DIR}/ai-tp-address"
-if [ ! -d "$SRC_DIR" ]; then
-    echo "Error: Source directory not found: $SRC_DIR"
-    exit 1
-fi
-cd "$SRC_DIR"
-if command -v gcc &> /dev/null; then
-    echo "Compiling with gcc..."
-    gcc -Wall -Wextra -Iinclude -c src/ai-tp-address.c -o ai-tp-address.o
-    ar rcs libai-tp-address.a ai-tp-address.o
-    echo "Static library created: libai-tp-address.a"
-    echo "Running tests..."
-    make test
-else
-    echo "Warning: gcc not found, skipping compilation"
-fi
-echo "ai-tp-address build complete."
+TERMUX_PKG_HOMEPAGE=https://github.com/ghshhf/glibc-packages
+TERMUX_PKG_DESCRIPTION="AI-TP address library"
+TERMUX_PKG_LICENSE="MIT"
+TERMUX_PKG_MAINTAINER="@ghshhf"
+TERMUX_PKG_VERSION=0.1.0
+# 无 SRCURL：源码在项目根目录 ai-tp-address/ 下
+TERMUX_PKG_DEPENDS="glibc"
+TERMUX_PKG_BUILD_IN_SRC=true
+
+termux_step_configure() {
+	# 从项目根目录复制源码到构建目录
+	local src_root="$(cd "${CROSS_PKG_DIR}/../ai-tp-address" && pwd)"
+	cp -r "${src_root}/"* "${TERMUX_PKG_SRCDIR}/"
+}
+
+termux_step_make() {
+	gcc -Wall -Wextra -Iinclude -c src/ai-tp-address.c -o ai-tp-address.o
+	ar rcs libai-tp-address.a ai-tp-address.o
+}
+
+termux_step_make_install() {
+	install -Dm644 libai-tp-address.a "${TERMUX_PREFIX}/lib/libai-tp-address.a"
+	install -Dm644 include/ai-tp-address.h "${TERMUX_PREFIX}/include/ai-tp-address.h"
+}

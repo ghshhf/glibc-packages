@@ -1,26 +1,24 @@
-#!/bin/bash
-PKG_NAME="ai-tp-sync"
-PKG_VERSION="1.0.0"
-PKG_DEPS="libai-storage ai-tp-discovery"
+TERMUX_PKG_HOMEPAGE=https://github.com/ghshhf/glibc-packages
+TERMUX_PKG_DESCRIPTION="AI-TP sync library"
+TERMUX_PKG_LICENSE="MIT"
+TERMUX_PKG_MAINTAINER="@ghshhf"
+TERMUX_PKG_VERSION=0.1.0
+# 无 SRCURL：源码在项目根目录 ai-tp-sync/ 下
+TERMUX_PKG_DEPENDS="glibc"
+TERMUX_PKG_BUILD_IN_SRC=true
 
-echo "Building $PKG_NAME $PKG_VERSION"
+termux_step_configure() {
+	# 从项目根目录复制源码到构建目录
+	local src_root="$(cd "${CROSS_PKG_DIR}/../ai-tp-sync" && pwd)"
+	cp -r "${src_root}/"* "${TERMUX_PKG_SRCDIR}/"
+}
 
-# 检查依赖
-for dep in $PKG_DEPS; do
-    if ! pkg-config --exists "$dep" 2>/dev/null; then
-        echo "Warning: Dependency '$dep' not found"
-    fi
-done
+termux_step_make() {
+	gcc -Wall -Wextra -Iinclude -c src/ai-tp-sync.c -o ai-tp-sync.o
+	ar rcs libai-tp-sync.a ai-tp-sync.o
+}
 
-# 编译
-cd "$(dirname "$0")/../ai-tp-sync" || exit 1
-make clean
-make all
-
-# 安装
-if [ "$1" = "install" ]; then
-    make install PREFIX="$2"
-fi
-
-echo "Build complete: $PKG_NAME"
-exit 0
+termux_step_make_install() {
+	install -Dm644 libai-tp-sync.a "${TERMUX_PREFIX}/lib/libai-tp-sync.a"
+	install -Dm644 include/ai-tp-sync.h "${TERMUX_PREFIX}/include/ai-tp-sync.h"
+}

@@ -1,61 +1,24 @@
-#!/bin/bash
-# ai-tp-scheduler build script for glibc-packages
-# AI-TP OS 计算层核心：AI 任务调度与资源管理
+TERMUX_PKG_HOMEPAGE=https://github.com/ghshhf/glibc-packages
+TERMUX_PKG_DESCRIPTION="AI-TP scheduler library"
+TERMUX_PKG_LICENSE="MIT"
+TERMUX_PKG_MAINTAINER="@ghshhf"
+TERMUX_PKG_VERSION=0.1.0
+# 无 SRCURL：源码在项目根目录 ai-tp-scheduler/ 下
+TERMUX_PKG_DEPENDS="glibc"
+TERMUX_PKG_BUILD_IN_SRC=true
 
-set -e
-
-PKG_NAME="ai-tp-scheduler"
-PKG_VERSION="1.0.0"
-PKG_DIR="$(cd "$(dirname "$0")/../.." && pwd)/${PKG_NAME}"
-
-echo "=== Building ${PKG_NAME} v${PKG_VERSION} ==="
-
-# 检查依赖
-check_dep() {
-    if ! command -v "$1" &>/dev/null; then
-        echo "Error: $1 not found. Please install $2."
-        exit 1
-    fi
+termux_step_configure() {
+	# 从项目根目录复制源码到构建目录
+	local src_root="$(cd "${CROSS_PKG_DIR}/../ai-tp-scheduler" && pwd)"
+	cp -r "${src_root}/"* "${TERMUX_PKG_SRCDIR}/"
 }
 
-check_dep gcc "GCC compiler"
-check_dep make "GNU Make"
-check_dep ar   "binutils"
+termux_step_make() {
+	gcc -Wall -Wextra -Iinclude -c src/ai-tp-scheduler.c -o ai-tp-scheduler.o
+	ar rcs libai-tp-scheduler.a ai-tp-scheduler.o
+}
 
-# 检查 ai-tp-scheduler 源码
-if [ ! -d "${PKG_DIR}" ]; then
-    echo "Error: ${PKG_DIR} not found."
-    exit 1
-fi
-
-# 检查头文件
-if [ ! -f "${PKG_DIR}/include/ai-tp-scheduler.h" ]; then
-    echo "Error: ai-tp-scheduler.h not found."
-    exit 1
-fi
-
-echo "  Sources: ${PKG_DIR}"
-
-# 编译
-cd "${PKG_DIR}"
-make clean 2>/dev/null || true
-make all
-
-# 验证
-if [ -f libaitp-scheduler.a ]; then
-    echo "  Build OK: libaitp-scheduler.a"
-else
-    echo "  Build FAILED"
-    exit 1
-fi
-
-# 运行测试
-echo "  Running tests..."
-if make test; then
-    echo "  Tests PASSED"
-else
-    echo "  Tests FAILED"
-    exit 1
-fi
-
-echo "=== ${PKG_NAME} v${PKG_VERSION} build complete ==="
+termux_step_make_install() {
+	install -Dm644 libai-tp-scheduler.a "${TERMUX_PREFIX}/lib/libai-tp-scheduler.a"
+	install -Dm644 include/ai-tp-scheduler.h "${TERMUX_PREFIX}/include/ai-tp-scheduler.h"
+}
