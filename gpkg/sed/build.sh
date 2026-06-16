@@ -1,0 +1,10 @@
+TERMUX_PKG_HOMEPAGE=https://www.gnu.org/software/sed/
+TERMUX_PKG_DESCRIPTION="GNU stream editor for filtering/transforming text"
+TERMUX_PKG_LICENSE="GPL-3.0"
+TERMUX_PKG_MAINTAINER="@termux-pacman"
+TERMUX_PKG_VERSION=4.10
+TERMUX_PKG_SRCURL=https://mirrors.kernel.org/gnu/sed/sed-${TERMUX_PKG_VERSION}.tar.xz
+TERMUX_PKG_SHA256=b8e72182b2ec96a3574e2998c47b7aaa64cc20ce000d8e9ac313cc07cecf28c7
+TERMUX_PKG_DEPENDS="libacl-glibc"
+TERMUX_PKG_ESSENTIAL=true
+TERMUX_PKG_BUILD_IN_SRC=true

@@ -1,0 +1,20 @@
+{
+  "repo": "glibc-packages",
+  "owner": "ghshhf",
+  "description": "Cross-platform package build system with public API access",
+  "homepage": "https://github.com/ghshhf/glibc-packages",
+  "pkg_format": "pacman",
+  "gpkg": {
+    "name": "gpkg",
+    "distribution": "gpkg",
+    "component": "gpkg",
+    "url": "https://raw.githubusercontent.com/ghshhf/glibc-packages/master/gpkg"
+  },
+  "scripts": {
+    "validate_format": "scripts/validate/format.py",
+    "validate_links": "scripts/validate/links.py",
+    "build_cross": "build-cross.sh",
+    "build_package": "build-package.sh",
+    "install_deps": "install-deps.sh"
+  }
+}

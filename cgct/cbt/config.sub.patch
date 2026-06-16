@@ -1,0 +1,43 @@
+--- src/binutils/config.sub	2025-02-02 03:00:00.000000000 +0300
++++ src/binutils/config.sub.patch	2025-02-28 17:32:26.583779076 +0300
+@@ -701,6 +701,10 @@
+ 				basic_machine=ymp-cray
+ 				basic_os=unicos
+ 				;;
++			cgct)
++				basic_machine=x86_64-pc
++				basic_os=cgct
++				;;
+ 			*)
+ 				basic_machine=$1
+ 				basic_os=
+@@ -1526,6 +1530,10 @@
+ 		kernel=linux
+ 		os=`echo "$basic_os" | sed -e 's|linux|gnu|'`
+ 		;;
++	cgct)
++		kernel=linux
++		os=cgct
++		;;
+ 	managarm*)
+ 		kernel=managarm
+ 		os=`echo "$basic_os" | sed -e 's|managarm|mlibc|'`
+@@ -2149,7 +2157,8 @@
+ 	| xenix* \
+ 	| xray* \
+ 	| zephyr* \
+-	| zvmoe* )
++	| zvmoe* \
++	| cgct )
+ 		;;
+ 	# This one is extra strict with allowed versions
+ 	sco3.2v2 | sco3.2v[4-9]* | sco5v6*)
+@@ -2210,7 +2219,7 @@
+ case $kernel-$os-$obj in
+ 	linux-gnu*- | linux-android*- | linux-dietlibc*- | linux-llvm*- \
+ 		    | linux-mlibc*- | linux-musl*- | linux-newlib*- \
+-		    | linux-relibc*- | linux-uclibc*- | linux-ohos*- )
++		    | linux-relibc*- | linux-uclibc*- | linux-ohos*- | linux-cgct- )
+ 		;;
+ 	uclinux-uclibc*- | uclinux-gnu*- )
+ 		;;

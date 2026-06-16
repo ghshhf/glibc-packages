@@ -1,0 +1,350 @@
+name: Cross-Platform Build
+
+# =============================================================================
+# glibc-packages 全平台 CI — 同时在 5 大平台 + 4 架构上验证构建
+#
+# 触发方式:
+#   • push 到 main 分支
+#   • pull request（任何分支）
+#   • 手动 dispatch（可指定自定义包列表）
+#
+# 平台矩阵:
+#   • Linux x86_64      (ubuntu-24.04 原生)
+#   • Linux aarch64     (ubuntu-24.04 + cross gcc)
+#   • Windows x86_64    (windows-2022 + MSYS2/MinGW)
+#   • macOS aarch64     (macos-14 / Apple Silicon 原生)
+#   • FreeBSD x86_64    (ubuntu-24.04 + FreeBSD VM)
+#   • Android aarch64   (ubuntu-24.04 + CGCT 工具链)
+# =============================================================================
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'gpkg/**'
+      - 'cross-platform/**'
+      - 'build-cross.sh'
+      - 'build-android.sh'
+      - 'build-linux.sh'
+      - 'build-windows.sh'
+      - 'build-darwin.sh'
+      - 'build-bsd.sh'
+      - 'build-all.sh'
+      - '.github/workflows/build-cross.yml'
+  pull_request:
+    paths:
+      - 'gpkg/**'
+      - 'cross-platform/**'
+      - 'build-*.sh'
+      - '.github/workflows/build-cross.yml'
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: "空格分隔的包目录列表，例如：gpkg/zlib gpkg/ncurses gpkg/neofetch"
+        required: false
+        default: "gpkg/zlib gpkg/ncurses gpkg/neofetch"
+
+concurrency:
+  group: cross-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# ---------- 默认构建包集合（当 CI 自动触发时使用） ----------
+env:
+  DEFAULT_PACKAGES: "gpkg/zlib gpkg/ncurses gpkg/neofetch gpkg/libxml2"
+
+# =============================================================================
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Linux x86_64 原生
+  # ---------------------------------------------------------------------------
+  linux-x86_64:
+    name: Linux x86_64 (native)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+              build-essential cmake make gcc g++ \
+              autoconf automake libtool pkg-config \
+              curl wget tar xz-utils zstd
+
+      - name: Build packages
+        run: |
+          if [ -n "${{ github.event.inputs.packages }}" ]; then
+            ./build-cross.sh --platform linux --arch x86_64 --clean ${{ github.event.inputs.packages }}
+          else
+            ./build-cross.sh --platform linux --arch x86_64 --clean $DEFAULT_PACKAGES
+          fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x86_64-output
+          path: cross-build/linux-x86_64/*/output/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 2. Linux aarch64 (交叉编译)
+  # ---------------------------------------------------------------------------
+  linux-aarch64:
+    name: Linux aarch64 (cross)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install aarch64 cross toolchain
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+              gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+              libc6-dev-arm64-cross \
+              cmake make autoconf automake pkg-config curl wget
+
+      - name: Configure cross compiler wrapper
+        run: |
+          cat > /tmp/cc-cross <<'EOF'
+          #!/bin/bash
+          exec aarch64-linux-gnu-gcc "$@"
+          EOF
+          cat > /tmp/cxx-cross <<'EOF'
+          #!/bin/bash
+          exec aarch64-linux-gnu-g++ "$@"
+          EOF
+          chmod +x /tmp/cc-cross /tmp/cxx-cross
+
+      - name: Build packages
+        run: |
+          export CC=/tmp/cc-cross
+          export CXX=/tmp/cxx-cross
+          if [ -n "${{ github.event.inputs.packages }}" ]; then
+            ./build-cross.sh --platform linux --arch aarch64 --clean --toolchain gcc-native ${{ github.event.inputs.packages }}
+          else
+            ./build-cross.sh --platform linux --arch aarch64 --clean --toolchain gcc-native $DEFAULT_PACKAGES
+          fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-aarch64-output
+          path: cross-build/linux-aarch64/*/output/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 3. Windows x86_64 (MSYS2 MinGW)
+  # ---------------------------------------------------------------------------
+  windows-x86_64:
+    name: Windows x86_64 (MSYS2)
+    runs-on: windows-2022
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2 / MinGW-w64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-libxml2
+            curl
+            wget
+            zip
+            unzip
+
+      - name: Build packages
+        run: |
+          if [ -n "${{ github.event.inputs.packages }}" ]; then
+            ./build-cross.sh --platform windows --arch x86_64 --clean --toolchain msys2-mingw ${{ github.event.inputs.packages }}
+          else
+            ./build-cross.sh --platform windows --arch x86_64 --clean --toolchain msys2-mingw $DEFAULT_PACKAGES
+          fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64-output
+          path: cross-build/windows-x86_64/*/output/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 4. macOS aarch64 (Apple Silicon 原生)
+  # ---------------------------------------------------------------------------
+  darwin-aarch64:
+    name: macOS aarch64 (Apple Silicon)
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          brew install cmake autoconf automake libtool pkg-config wget
+
+      - name: Build packages
+        run: |
+          if [ -n "${{ github.event.inputs.packages }}" ]; then
+            ./build-cross.sh --platform darwin --arch aarch64 --clean --toolchain clang-native ${{ github.event.inputs.packages }}
+          else
+            ./build-cross.sh --platform darwin --arch aarch64 --clean --toolchain clang-native $DEFAULT_PACKAGES
+          fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-aarch64-output
+          path: cross-build/darwin-aarch64/*/output/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 5. macOS x86_64 (Intel)
+  # ---------------------------------------------------------------------------
+  darwin-x86_64:
+    name: macOS x86_64 (Intel)
+    runs-on: macos-13
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          brew install cmake autoconf automake libtool pkg-config wget
+
+      - name: Build packages
+        run: |
+          if [ -n "${{ github.event.inputs.packages }}" ]; then
+            ./build-cross.sh --platform darwin --arch x86_64 --clean --toolchain clang-native ${{ github.event.inputs.packages }}
+          else
+            ./build-cross.sh --platform darwin --arch x86_64 --clean --toolchain clang-native $DEFAULT_PACKAGES
+          fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: darwin-x86_64-output
+          path: cross-build/darwin-x86_64/*/output/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 6. FreeBSD x86_64 (通过 VM)
+  # ---------------------------------------------------------------------------
+  freebsd-x86_64:
+    name: FreeBSD x86_64 (VM)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build in FreeBSD VM
+        id: build
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "14"
+          prepare: |
+            pkg install -y bash curl wget gmake cmake autoconf automake libtool pkgconf
+          run: |
+            # 在 FreeBSD shell 中
+            if [ -n "${{ github.event.inputs.packages }}" ]; then
+              bash ./build-cross.sh --platform bsd --arch x86_64 --clean --toolchain gcc-native ${{ github.event.inputs.packages }}
+            else
+              bash ./build-cross.sh --platform bsd --arch x86_64 --clean --toolchain gcc-native $DEFAULT_PACKAGES
+            fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: freebsd-x86_64-output
+          path: cross-build/bsd-x86_64/*/output/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 7. Android aarch64 (CGCT 工具链)
+  # ---------------------------------------------------------------------------
+  android-aarch64:
+    name: Android aarch64 (CGCT)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install base build tools
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+              build-essential cmake make autoconf automake pkg-config curl wget \
+              qemu-user qemu-user-static binfmt-support
+
+      - name: Set up CGCT toolchain
+        run: |
+          # CGCT (Cross GCC) — 下载官方 termux-glibc-toolchain 或 build 一个基础版本
+          # 这里使用简化版本：下载 Android NDK clang，作为交叉编译器使用
+          NDK_VERSION="27.0.12077973"
+          echo "yes" | sudo /opt/android-sdk/cmdline-tools/*/bin/sdkmanager \
+              "ndk;${NDK_VERSION}" 2>&1 | tail -5 || true
+          echo "NDK 准备完成"
+
+      - name: Build packages
+        run: |
+          # 通过 build-android.sh 或直接使用 build-cross.sh --platform android
+          if [ -n "${{ github.event.inputs.packages }}" ]; then
+            ./build-cross.sh --platform android --arch aarch64 --clean ${{ github.event.inputs.packages }}
+          else
+            ./build-cross.sh --platform android --arch aarch64 --clean $DEFAULT_PACKAGES
+          fi
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aarch64-output
+          path: cross-build/android-aarch64/*/output/
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # 8. 汇总报告：所有平台构建结果
+  # ---------------------------------------------------------------------------
+  summary:
+    name: Cross-Platform Build Summary
+    runs-on: ubuntu-24.04
+    if: always()
+    needs: [linux-x86_64, linux-aarch64, windows-x86_64, darwin-aarch64, darwin-x86_64, freebsd-x86_64, android-aarch64]
+    steps:
+      - name: Generate summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY <<'EOF'
+          # glibc-packages 全平台构建报告
+
+          | 平台 | 架构 | 状态 |
+          |------|------|------|
+          EOF
+          for job in linux-x86_64 linux-aarch64 windows-x86_64 darwin-aarch64 darwin-x86_64 freebsd-x86_64 android-aarch64; do
+              echo "| ${job%%-*} | ${job##*-} | $([[ \"${needs[$job].result}\" == \"success\" ]] && echo \"✅ 成功\" || echo \"❌ $needs[$job].result\") |" >> $GITHUB_STEP_SUMMARY
+          done

@@ -1,0 +1,85 @@
+pkgname=cbt
+pkgver=2.45.1
+pkgrel=0
+pkgdesc='Cross Binutils for Termux (only for Linux)'
+arch=(x86_64)
+url='https://www.gnu.org/software/binutils/'
+license=('GPL3' 'GPL' 'FDL1.3' 'custom:FSFAP')
+source=(https://ftp.gnu.org/gnu/binutils/binutils-$pkgver.tar.xz
+	config.sub.patch
+	ldmain.c.patch
+	ldmain.h.patch)
+sha256sums=('5fe101e6fe9d18fdec95962d81ed670fdee5f37e3f48f0bef87bddf862513aa5'
+            '96098ecd39d5ffb95364f405f4182cc2524ceb57f68884c3bc6cddb080190d2e'
+            'd6f9b3e9495c8b6030f7b96469f86f15c06ebcd3a83c40fd6c1232dbdf5517b3'
+            '9c58abb0507f85fdc7603980a5e1021bc55bd44444f74937c1e2ab72f8f97f49')
+optdepends=('glibc-cgct')
+groups=('cgct')
+
+prepare() {
+	ln -s binutils-${pkgver} binutils
+	for i in *.patch; do
+		patch -Np1 -i ${srcdir}/$i
+	done
+}
+
+build() {
+	unset CFLAGS CXXFLAGS AR LD CC CXX
+	CFLAGS="-O2 -pipe -fno-plt -fexceptions -Wp,-D_FORTIFY_SOURCE=2 -Wformat -fstack-clash-protection"
+	CXXFLAGS="${CFLAGS} -Wp,-D_GLIBCXX_ASSERTIONS"
+
+	for target in aarch64-linux-gnu arm-linux-gnueabihf x86_64-linux-gnu i686-linux-gnu; do
+		arch_build=${target/-*}
+		CGCT_PREFIX="${CGCT_PATH}/${arch_build}"
+		mkdir binutils-${arch_build}
+		cd binutils-${arch_build}
+
+		local flags_32bit=""
+		if [ "${arch_build}" = "arm" ] || [ "${arch_build}" = "i686" ]; then
+			flags_32bit=" -DTARGET_32BIT -Wp,-DTARGET_32BIT"
+		fi
+
+		"$srcdir"/binutils/configure \
+			--host=cgct \
+			--build=${CHOST} \
+			--target=$target \
+			--prefix=$CGCT_PREFIX \
+			--disable-multilib \
+			--with-gnu-as \
+			--with-gnu-ld \
+			--disable-nls \
+			--enable-ld=default \
+			--enable-plugins \
+			--enable-deterministic-archives \
+			CC=x86_64-linux-gnu-gcc \
+			CXX=x86_64-linux-gnu-g++ \
+			CFLAGS="${CFLAGS} ${flags_32bit}" \
+			CXXFLAGS="${CXXFLAGS} ${flags_32bit}" \
+			AR=ar \
+			LD=ld
+		make
+
+		cd ..
+	done
+}
+
+package() {
+	for target in aarch64-linux-gnu arm-linux-gnueabihf x86_64-linux-gnu i686-linux-gnu; do
+		arch_build=${target/-*}
+		CGCT_PREFIX="${CGCT_PATH}/${arch_build}"
+		cd binutils-${arch_build}
+
+		make DESTDIR="$pkgdir" install
+
+		mv $pkgdir/${CGCT_PREFIX}/$target/bin/* $pkgdir/${CGCT_PREFIX}/bin
+		mv $pkgdir/${CGCT_PREFIX}/$target/lib/* $pkgdir/${CGCT_PREFIX}/lib
+		rm -fr $pkgdir/${CGCT_PREFIX}/$target
+		rm -fr $pkgdir/${CGCT_PREFIX}/share
+		rm -fr $pkgdir/${CGCT_PREFIX}/include
+		rm -fr $pkgdir/${CGCT_PREFIX}/etc
+
+		cd ..
+	done
+
+	replace_hard_with_symbolic "$pkgdir"
+}

@@ -1,0 +1,9 @@
+TERMUX_PKG_HOMEPAGE=https://www.gnu.org/software/autoconf/
+TERMUX_PKG_DESCRIPTION="GNU Autoconf"
+TERMUX_PKG_LICENSE="GPL-3.0"
+TERMUX_PKG_MAINTAINER="@termux-pacman"
+TERMUX_PKG_VERSION=2.73
+TERMUX_PKG_SRCURL=https://mirrors.kernel.org/gnu/autoconf/autoconf-${TERMUX_PKG_VERSION}.tar.xz
+TERMUX_PKG_SHA256=99f35014f5f6853d55c3830e76af44cce496bfb5fb42a7f4bd1a5f56a74f972e
+TERMUX_PKG_DEPENDS="m4-glibc, perl-glibc"
+TERMUX_PKG_PLATFORM_INDEPENDENT=true

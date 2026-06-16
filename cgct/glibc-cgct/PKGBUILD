@@ -1,0 +1,79 @@
+pkgname=glibc-cgct
+pkgver=2.42
+pkgrel=0
+pkgdesc="GNU C Library for CGCT (only for Linux)"
+arch=(x86_64)
+url='https://www.gnu.org/software/libc/'
+license=('GPL' 'LGPL')
+source=(https://ftp.gnu.org/gnu/libc/glibc-$pkgver.tar.xz
+	rtld.c.patch
+	setup-cgct)
+sha256sums=('d1775e32e4628e64ef930f435b67bb63af7599acb6be2b335b9f19f16509f17f'
+            '7113a921551e55e266da36fc54c66fe5b3545f1c4662fd76bb4e16cfd1f573f3'
+            '15dcc4a741f0a347252aa26963bb0f1a7bdd5dbfc2690827600d6acb5dbd2aa9')
+groups=('cgct')
+
+prepare() {
+	ln -s glibc-${pkgver} glibc
+	for i in *.patch; do
+		patch -Np1 -i ${srcdir}/$i
+	done
+
+	for var in LD_WARN LD_LIBRARY_PATH LD_BIND_NOW LD_BIND_NOT LD_DYNAMIC_WEAK LD_PRELOAD; do
+		for file in $(grep -s -r -l "${var}" ./glibc); do
+			sed -i "s/${var}/${var}_CGCT/g" ${file}
+		done
+	done
+
+	rm ./glibc/sysdeps/unix/sysv/linux/x86_64/configure*
+
+	mkdir -p glibc-build || true
+}
+
+build() {
+	cd glibc-build
+
+	unset CFLAGS CXXFLAGS AR LD CC CXX
+
+	echo "slibdir=${CGCT_PATH}/lib" > configparms
+	echo "rtlddir=${CGCT_PATH}/lib" >> configparms
+	echo "sbindir=${CGCT_PATH}/bin" >> configparms
+	echo "rootsbindir=${CGCT_PATH}/bin" >> configparms
+
+	../glibc/configure \
+		--prefix=$CGCT_PATH \
+		--libdir=${CGCT_PATH}/lib \
+		--libexecdir=${CGCT_PATH}/lib \
+		--host=${CHOST} \
+		--build=${CHOST} \
+		--target=${CHOST} \
+		--with-bugurl=https://github.com/termux-pacman/glibc-packages/issues \
+		--enable-bind-now \
+		--disable-multi-arch \
+		--enable-stack-protector=strong \
+		--enable-systemtap \
+		--disable-nscd \
+		--disable-profile \
+		--disable-werror \
+		--disable-default-pie \
+		--enable-cet
+
+	make -O
+}
+
+package() {
+	make -C glibc-build install_root="$pkgdir" install
+	rm -f "$pkgdir"/${CGCT_PATH}/etc/ld.so.{cache,conf}
+	rm -f "$pkgdir"/${CGCT_PATH}/bin/{tzselect,zdump,zic}
+
+	cd glibc
+
+	install -m644 nscd/nscd.conf "$pkgdir/${CGCT_PATH}/etc/nscd.conf"
+	install -m644 posix/gai.conf "$pkgdir"/${CGCT_PATH}/etc/gai.conf
+
+	rm -fr "$pkgdir"/${CGCT_PATH}/{include,var}
+
+	install -m755 "$srcdir/setup-cgct" "$pkgdir/${CGCT_PATH}/bin"
+
+	replace_hard_with_symbolic "$pkgdir"
+}

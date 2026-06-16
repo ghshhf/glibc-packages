@@ -1,0 +1,9 @@
+TERMUX_PKG_HOMEPAGE=https://www.gnu.org/software/gzip/
+TERMUX_PKG_DESCRIPTION="GNU compression utility"
+TERMUX_PKG_LICENSE="GPL-3.0"
+TERMUX_PKG_MAINTAINER="@termux-pacman"
+TERMUX_PKG_VERSION=1.14
+TERMUX_PKG_SRCURL=https://mirrors.kernel.org/gnu/gzip/gzip-${TERMUX_PKG_VERSION}.tar.xz
+TERMUX_PKG_SHA256=01a7b881bd220bfdf615f97b8718f80bdfd3f6add385b993dcf6efd14e8c0ac6
+TERMUX_PKG_DEPENDS="glibc"
+TERMUX_PKG_ESSENTIAL=true

@@ -1,0 +1,28 @@
+# 构建产物目录
+cross-build/
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# 日志文件
+*.log
+
+# 压缩包
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.zip
+
+# 编辑器目录
+.vscode/
+.idea/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+glibc-packages-latest.bundle

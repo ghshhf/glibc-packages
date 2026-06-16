@@ -1,0 +1,8 @@
+TERMUX_PKG_HOMEPAGE=https://github.com/KhronosGroup/SPIRV-Headers
+TERMUX_PKG_DESCRIPTION="SPIR-V Headers"
+TERMUX_PKG_LICENSE="Apache-2.0"
+TERMUX_PKG_MAINTAINER="@termux-pacman"
+TERMUX_PKG_VERSION="1.4.304.1"
+TERMUX_PKG_SRCURL=https://github.com/KhronosGroup/SPIRV-Headers/archive/refs/tags/vulkan-sdk-${TERMUX_PKG_VERSION}/spirv-headers-${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=66e6cec19e7433fc58ace8cdf4040be0d52bb5920e54109967df2dd9598a8d48
+TERMUX_PKG_PLATFORM_INDEPENDENT=true
