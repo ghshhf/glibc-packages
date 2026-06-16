@@ -139,6 +139,7 @@ curl -s https://raw.githubusercontent.com/ghshhf/glibc-packages/master/repo.json
 
 | Package | Description | Build System | Platforms | Status |
 | --- | --- | --- | --- | --- |
+| [ai-tp-scrape](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ai-tp-scrape) | AI-TP 轻量级网页爬取组件（自研） | Python | All | 🚧 |
 | [ai-tp-scheduler](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ai-tp-scheduler) | AI-TP 分布式 AI 任务调度器（自研） | Rust | Linux / macOS | 📋 |
 | [ollama](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ollama) | 本地 LLM 推理服务 | Go | Linux / macOS | 📋 |
 | [localai](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/localai) | 本地 AI 推理引擎（fork） | CMake + Go | Linux / macOS | 📋 |
