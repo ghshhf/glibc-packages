@@ -5,6 +5,19 @@
 
 ---
 
+## 📥 立即安装
+
+| 平台 | 安装包 | 说明 |
+|------|--------|------|
+| 🪟 **Windows 10/11** | [⬇ 下载 SkyNet Desktop v1.0.0](https://github.com/ghshhf/glibc-packages/releases/latest/download/SkyNet-Desktop-Setup-1.0.0.exe) | Electron 桌面仪表盘 + SSI 运行时 |
+| 📱 **Android 7+** | [⬇ 下载 SkyNet Runtime v1.0.0](https://github.com/ghshhf/glibc-packages/releases/latest/download/SkyNet-Runtime-v1.0.0.apk) | WebView 运行时仪表盘 |
+| 🐍 **pip 包** | `pip install skynet-ssi` | Python SDK（开发中）|
+| 📦 **npm 包** | `npm install @skynet/browser-runtime` | 浏览器运行时 |
+
+> 安装包通过 [GitHub Releases](https://github.com/ghshhf/glibc-packages/releases) 发布，SHA256 校验值见对应 Release 页面。
+
+---
+
 ## ⚡ 升级了什么？（新旧对比）
 
 | 维度 | 旧版 glibc-packages | 新版 SkyNet |
