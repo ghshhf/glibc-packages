@@ -1,5 +1,5 @@
 /**
- * AI-TP OS — End-to-End Integration Demo
+ * SkyNet — End-to-End Integration Demo
  *
  * Demonstrates the complete SSI stack working together:
  *   1. SSI-CORE: Component lifecycle
@@ -65,7 +65,7 @@ class MockNetworkStack extends SsiBaseComponent {
 async function main() {
   console.log('');
   console.log('══════════════════════════════════════════════════');
-  console.log('  AI-TP OS SSI Integration Demo v1.0');
+  console.log('  SkyNet SSI Integration Demo v1.0');
   console.log('══════════════════════════════════════════════════');
   console.log('');
 

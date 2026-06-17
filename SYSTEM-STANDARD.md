@@ -1,6 +1,6 @@
-# AI-TP OS 系统标准架构 v1.0
+# SkyNet (天网) — 系统标准架构 v1.0
 
-> **System Standard Architecture**  
+> **SkyNet System Standard Architecture**  
 > 一份定义"文明级"基础设施底层系统的完全标准化架构规范。  
 > 浏览器不是移植目标——而是系统的原生核心组件。
 

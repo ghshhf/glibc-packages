@@ -1,4 +1,4 @@
-# SSI 组件模型规范
+# SkyNet SSI 组件模型规范
 
 > **Standard SWBN Component Model** — 系统中所有组件遵循的统一打包与运行规范。
 

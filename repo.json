@@ -1,7 +1,7 @@
 {
-  "repo": "glibc-packages",
+  "repo": "SkyNet",
   "owner": "ghshhf",
-  "description": "AI-TP OS System Standard — fully standardized cross-platform component system with deep browser integration",
+  "description": "SkyNet (天网) — AI-TP OS System Standard: fully standardized cross-platform component system with deep browser integration",
   "homepage": "https://github.com/ghshhf/glibc-packages",
   "pkg_format": "swbn",
   "system_standards": {

@@ -1,277 +1,231 @@
-# glibc-packages
-面向公共 API 的跨平台软件包构建系统。为 Termux、Linux、Android、Windows、macOS、BSD 提供统一的 glibc 软件包构建与发布能力。
+# SkyNet (天网) 🌐  
+**从 glibc-packages 到 SkyNet — 完全重构的标准化底层系统**
 
-> 本项目以 [public-apis](https://github.com/ghshhf/public-apis) 为规范参考，采用一致的文档格式、验证脚本与 CI 工作流。
+> 这不是一次简单的改名。这是一次从"包构建工具"到"文明级基础设施"的跃迁。
 
-<br >
+---
 
-## 📦 快速开始
+## ⚡ 升级了什么？（新旧对比）
 
-在本地构建一个软件包：
+| 维度 | 旧版 glibc-packages | 新版 SkyNet |
+|------|---------------------|-------------|
+| **定位** | 跨平台 glibc 包构建工具 | 标准化底层系统架构 |
+| **包格式** | `.tar.gz` / `.deb` / `.pkg.tar.zst` | **`.swbn`** — Standard WASM Binary Notation |
+| **架构** | 无统一规范，各包自行其是 | **SSI v1.0** — 12 个标准接口，强制规范 |
+| **浏览器** | 外部移植目标 (`--platform browser`) | **原生核心组件** — 浏览器即内核 |
+| **组件模型** | 无 | **标准化组件** — manifest + wasm + signature |
+| **通信** | 无 | **SSI 总线** — 二进制 IPC，优先级队列，跨组件路由 |
+| **安全** | 无 | **5 层安全模型** — 沙箱 + ACL + 签名 + 审计 |
+| **运行时** | 无 | **SSI-KRN** — TypeScript WASM 运行时内核 |
+| **安装包** | 无 | **Windows .exe + Android .apk** — 一键安装仪表盘 |
+
+### 为什么用 SkyNet 重建？
+
+```
+旧模式：每个平台写一套代码
+  Android → Java/Kotlin
+  iOS     → Swift
+  Windows → C++/.NET
+  Web     → JavaScript
+  ↓ 重复造轮子，维护地狱
+
+新模式：SkyNet 标准化架构
+  你的应用 ──→ .swbn 标准组件
+                ↓
+  ┌─────────────┼─────────────┐
+  Browser      Native         Embedded
+  (V8/WASM)   (WAMR/WASM3)   (WASM3-micro)
+                ↓
+         同一套代码，全平台运行
+```
+
+**关键优势：**
+- **写一次，跑所有平台** — 浏览器、桌面、移动端、IoT 同一套 `.swbn`
+- **浏览器深度集成** — Chromium 是系统原生渲染层，不是外挂
+- **强制标准化** — 不遵循 SSI 接口的组件无法接入系统
+- **安全优先** — 每个组件沙箱隔离，权限显式声明，行为可审计
+
+---
+
+## 🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────────────────┐
+│   L5: 应用层 — 你的 WASM 应用 (.swbn 格式)              │
+├─────────────────────────────────────────────────────────┤
+│   L4: 系统服务层 — 浏览器引擎 / 存储 / 计算 / 网络      │
+│   接口: SSI-BR / SSI-DB / SSI-AI / SSI-NET              │
+├─────────────────────────────────────────────────────────┤
+│   L3: 内核层 — WASM 运行时 / SSI 总线 / 安全模块        │
+│   接口: SSI-KRN / SSI-SEC                               │
+├─────────────────────────────────────────────────────────┤
+│   L2: 硬件抽象层 — 设备信息 / GPU / 传感器              │
+│   接口: SSI-HAL                                         │
+├─────────────────────────────────────────────────────────┤
+│   L1: 物理层 — 手机 / 电脑 / 浏览器 / 服务器 / IoT      │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📦 安装包下载
+
+| 平台 | 下载 | 说明 |
+|------|------|------|
+| **Windows** | `SkyNet-SSI-Runtime-Setup.exe` | 双击安装，自动创建桌面快捷方式 |
+| **Android** | `SkyNet-SSI-Runtime.apk` | 安装后全屏运行 SSI 仪表盘 |
+| **浏览器** | PWA | 访问 `test/browser-test.html` → "添加到桌面" |
+
+---
+
+## 🚀 快速开始
+
+### 运行 SSI 演示（验证全栈）
 
 ```bash
+npx ts-node ssi/demo/demo.ts
+```
+
+输出示例：
+```
+══════════════════════════════════════════════════
+  SkyNet SSI Integration Demo v1.0
+══════════════════════════════════════════════════
+[OK] Component Registry: 3 components
+[OK] SSI Service Bus: Running
+[OK] Browser Engine: full mode (WebGPU)
+[OK] IPC Routing: 5 messages delivered
+✅ Demo Complete — SSI Stack Verified
+```
+
+### 构建你的第一个 .swbn 组件
+
+```bash
+# 1. 初始化组件
+npx ts-node ssi/packager/src/index.ts init --name my-app --type browser
+
+# 2. 编写代码 (main.wasm)
+# 3. 构建 .swbn 包
+npx ts-node ssi/packager/src/index.ts build . --output my-app.swbn
+
+# 4. 验证
+npx ts-node ssi/packager/src/index.ts info my-app.swbn
+```
+
+### 构建 WASM 组件（需要 Emscripten）
+
+```bash
+./build-wasm.sh --output-format swbn gpkg/zlib-wasm
+# → output/zlib-1.3.2-browser-wasm32.swbn
+```
+
+---
+
+## 📚 核心文档
+
+| 文档 | 内容 | 读完能做什么 |
+|------|------|-------------|
+| [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md) | 系统架构总纲 — 5 层模型、设计哲学 | 理解 SkyNet 为什么这样设计 |
+| [SPEC-INTERFACE.md](SPEC-INTERFACE.md) | SSI 接口规范 — 12 个接口完整 IDL | 开发符合标准的组件 |
+| [specs/component-model.md](specs/component-model.md) | .swbn 包格式详解 | 打包、签名、验证组件 |
+| [specs/ipc.md](specs/ipc.md) | IPC 总线二进制协议 | 实现跨组件通信 |
+| [specs/security.md](specs/security.md) | 安全模型与权限体系 | 设计安全的组件架构 |
+
+---
+
+## 🧩 SSI 接口一览
+
+| 接口 | 职责 | 状态 |
+|------|------|------|
+| **SSI-CORE** | 组件生命周期、注册表、消息通信 | ✅ 参考实现完成 |
+| **SSI-BR** | 浏览器渲染、脚本执行、GPU 计算 | ✅ 三模渲染实现 |
+| **SSI-UI** | 窗口管理、合成器、输入路由 | 📝 规范定义 |
+| **SSI-NET** | AI-TP 协议、P2P、NAT 穿透 | 📝 规范定义 |
+| **SSI-DB** | KV 存储、P2P 存储、存储证明 | 📝 规范定义 |
+| **SSI-AI** | AI 任务调度、模型分发、推理 | 📝 规范定义 |
+| **SSI-KRN** | WASM 运行时、进程、内存管理 | ✅ 参考实现完成 |
+| **SSI-FS** | 虚拟文件系统、多后端 | 📝 规范定义 |
+| **SSI-HAL** | 硬件抽象、传感器、电池 | 📝 规范定义 |
+| **SSI-SEC** | 身份、加密、权限、审计 | 📝 规范定义 |
+
+---
+
+## 📁 项目结构
+
+```
+SkyNet/
+├── 📜 SYSTEM-STANDARD.md          ← 系统宪法
+├── 📜 SPEC-INTERFACE.md           ← SSI 接口规范
+├── 📜 AI-TP-OS-Architecture.md    ← 操作系统架构
+│
+├── 📂 specs/                      ← 子规范
+│   ├── component-model.md         ← .swbn 格式
+│   ├── ipc.md                     ← IPC 总线
+│   ├── wasm-runtime.md            ← WASM 运行时
+│   └── security.md                ← 安全模型
+│
+├── 📂 ssi/                        ← 参考实现
+│   ├── core/                      ← SSI-CORE 组件基座
+│   ├── bus/                       ← SSI 服务总线
+│   ├── browser/                   ← SSI-BR 浏览器引擎
+│   ├── packager/                  ← .swbn 打包 CLI
+│   └── demo/                      ← 端到端演示
+│
+├── 📂 browser-runtime/            ← SSI-KRN 运行时内核
+├── 📂 desktop/                    ← Windows 安装包源码
+├── 📂 android/                    ← Android APK 源码
+│
+├── 📂 cross-platform/             ← 构建系统
+│   ├── toolchains/                ← 编译工具链
+│   ├── platforms/                 ← 平台配置
+│   └── core/                      ← 构建步骤
+│
+├── 📂 gpkg/                       ← 标准组件包定义
+│   ├── wasm-runtime/              ← WASM 运行时引导
+│   └── zlib-wasm/                 ← zlib WASM 示例
+│
+├── 📂 test/                       ← 浏览器测试页面
+├── 📂 dist/                       ← 安装包输出
+└── 📂 public/                     ← PWA 资源
+```
+
+---
+
+## 🛠️ 原生包构建（向后兼容）
+
+SkyNet 仍然支持原有的跨平台包构建系统：
+
+```bash
+# 构建单个包
 ./build-cross.sh --clean --dep-order gpkg/zlib
-```
 
-通过公共 API 查询包信息：
+# 全平台构建（自动检测 Emscripten 添加 WASM）
+./build-all.sh
 
-```bash
 # 查询包元数据
-curl -s https://raw.githubusercontent.com/ghshhf/glibc-packages/master/repo.json | python3 -m json.tool
+curl -s https://raw.githubusercontent.com/ghshhf/glibc-packages/master/repo.json \
+  | python3 -m json.tool
 ```
 
-<br >
+---
 
-## Index
+## 🤝 贡献
 
-* [核心能力](#核心能力)
-* [公共 API 概览](#公共-api-概览)
-* [支持的软件包](#支持的软件包)
-* [支持的平台与架构](#支持的平台与架构)
-* [构建系统](#构建系统)
-* [项目结构](#项目结构)
-* [贡献指南](#贡献指南)
-* [路线图](#路线图)
+| 贡献类型 | 入口 | 规范 |
+|---------|------|------|
+| 包定义 | `gpkg/<name>/build.sh` | Termux 标准 + format.py 校验 |
+| SSI 组件 | `ssi/<module>/` | SPEC-INTERFACE.md |
+| 架构设计 | Issue / PR → SYSTEM-STANDARD.md | 需核心团队 review |
 
-<br >
+---
 
-## 核心能力
+## 📜 协议
 
-| 能力 | 说明 |
-|------|------|
-| 统一 build-step 框架 | 6 步标准流水线：`prepare → configure → build → install → post_install → package` |
-| Termux 变量适配器 | `pkg-adapter.sh` 自动将 `TERMUX_PKG_*` 翻译为 `CROSS_PKG_*` |
-| BUILD_IN_SRC 支持 | autotools 老项目可在源码目录内构建（`CROSS_BUILDDIR = CROSS_SRCDIR`） |
-| 依赖拓扑排序 | `--dep-order` 用 `tsort` 按 `TERMUX_PKG_DEPENDS` 自动排序构建顺序 |
-| SHA256 校验 | 源码下载带校验，错误自动重新下载 |
-| 产物命名统一 | `.tar.gz` 输出，不再产生 `.deb.tar.gz` 等歧义扩展名 |
-| 多包隔离 | 每个包在独立子 shell 构建，环境变量互不污染 |
-| GitHub Actions 矩阵 | Linux x86_64/aarch64 + macOS + Windows + FreeBSD + Android |
+MIT — 属于 SkyNet (天网) / AI-TP 协议项目的一部分  
+**维护者**: [@ghshhf](https://github.com/ghshhf)  
+**仓库**: https://github.com/ghshhf/glibc-packages
 
-<br >
+---
 
-## 公共 API 概览
-
-本项目对外暴露的可程序化调用接口：
-
-| API | Description | Auth | HTTPS | CORS |
-| --- | --- | --- | --- | --- |
-| [repo.json](https://raw.githubusercontent.com/ghshhf/glibc-packages/master/repo.json) | 仓库元数据与包索引（JSON 格式） | No | Yes | Yes |
-| [build-cross.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-cross.sh) | 跨平台构建主入口（CLI API） | No | Yes | — |
-| [build-package.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-package.sh) | 单包构建脚本（CLI API） | No | Yes | — |
-| [get-build-package.sh](https://github.com/ghshhf/glibc-packages/blob/master/get-build-package.sh) | 构建脚本拉取工具（CLI API） | No | Yes | — |
-| [generate-build-scripts.sh](https://github.com/ghshhf/glibc-packages/blob/master/generate-build-scripts.sh) | 构建脚本生成器（CLI API） | No | Yes | — |
-| [gpkg/\*/build.sh](https://github.com/ghshhf/glibc-packages/tree/master/gpkg) | 单包元数据 API（`TERMUX_PKG_*` 变量规范） | No | Yes | — |
-
-### 各平台构建 API
-
-| API | Description | Auth | HTTPS | CORS |
-| --- | --- | --- | --- | --- |
-| [build-linux.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-linux.sh) | Linux 平台构建脚本 | No | Yes | — |
-| [build-android.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-android.sh) | Android/Termux 平台构建脚本 | No | Yes | — |
-| [build-windows.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-windows.sh) | Windows/MinGW 平台构建脚本 | No | Yes | — |
-| [build-darwin.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-darwin.sh) | macOS 平台构建脚本 | No | Yes | — |
-| [build-bsd.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-bsd.sh) | FreeBSD/OpenBSD 平台构建脚本 | No | Yes | — |
-| [build-all.sh](https://github.com/ghshhf/glibc-packages/blob/master/build-all.sh) | 一键多平台调度脚本 | No | Yes | — |
-
-### 辅助脚本 API
-
-| API | Description | Auth | HTTPS | CORS |
-| --- | --- | --- | --- | --- |
-| [install-deps.sh](https://github.com/ghshhf/glibc-packages/blob/master/install-deps.sh) | 自动安装构建依赖 | No | Yes | — |
-| [clean.sh](https://github.com/ghshhf/glibc-packages/blob/master/clean.sh) | 清理构建产物 | No | Yes | — |
-| [big-pkgs.list](https://github.com/ghshhf/glibc-packages/blob/master/big-pkgs.list) | 大型包清单（资源占用参考） | No | Yes | — |
-
-<br >
-
-## 支持的软件包
-
-### 基础系统库
-
-| Package | Description | Build System | Platforms | Status |
-| --- | --- | --- | --- | --- |
-| [zlib](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/zlib) | 无损数据压缩库 | configure | All | ✅ |
-| [ncurses](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ncurses) | 终端 UI 库（htop 等依赖） | configure | All | ✅ |
-| [readline](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/readline) | GNU 命令行编辑库 | autotools | Linux / macOS / BSD | ✅ |
-| [libevent](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/libevent) | 异步事件通知库 | autotools | Linux / macOS / BSD | ✅ |
-| [openssl](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/openssl) | TLS/SSL 与通用加密库 | custom | All | ✅ |
-
-### 系统工具
-
-| Package | Description | Build System | Platforms | Status |
-| --- | --- | --- | --- | --- |
-| [neofetch](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/neofetch) | 系统信息展示工具 | Shell script | All | ✅ |
-| [htop](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/htop) | 交互式进程监视器 | autotools + ncurses | Linux / macOS / BSD | ✅ |
-| [time](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/time) | GNU time 计时器 | autotools | Linux / macOS / BSD | ✅ |
-| [sd](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/sd) | 快速 sed 替代（CLI 文本替换） | Rust/Cargo | All | ✅ |
-| [tmux](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/tmux) | 终端多路复用器 | autotools | Linux / macOS / BSD | ✅ |
-
-### 编程语言
-
-| Package | Description | Build System | Platforms | Status |
-| --- | --- | --- | --- | --- |
-| [python](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/python) | Python 3 解释器与标准库 | autotools | All | ✅ |
-| [ruby](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ruby) | Ruby 解释器 | autotools | Linux / macOS / BSD | ✅ |
-| [nodejs](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/nodejs) | Node.js JavaScript 运行时 | custom | All | ✅ |
-| [rust](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/rust) | Rust 工具链（rustc + cargo） | custom | All | ✅ |
-
-### 网络层包（AI-TP OS 依赖）
-
-| Package | Description | Build System | Platforms | Status |
-| --- | --- | --- | --- | --- |
-| [libp2p](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/libp2p) | P2P 网络基础库（go-libp2p） | Go | Linux / macOS | ✅ |
-| [nat-pmp](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/nat-pmp) | NAT 端口映射协议实现 | autotools | Linux / macOS / BSD | ✅ |
-| [libstun](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/libstun) | STUN/TURN 客户端库 | autotools | Linux / macOS / BSD | ✅ |
-| [libquic](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/libquic) | QUIC 协议实现（基于 ngtcp2） | autotools | All | ✅ |
-| [ai-tp-nat](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ai-tp-nat) | AI-TP 增强型 NAT 穿透工具（自研） | Rust | Linux / macOS | ✅ |
-
-### 存储层包（AI-TP OS 依赖）
-
-| Package | Description | Build System | Platforms | Status |
-| --- | --- | --- | --- | --- |
-| [libai-storage](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/libai-storage) | AI-TP 统一存储 API 抽象层（自研） | CMake | All | ✅ |
-| [syncthing](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/syncthing) | P2P 文件同步工具 | Go | Linux / macOS / BSD | ✅ |
-| [ai-tp-sync](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ai-tp-sync) | AI-TP 内容寻址文件同步（自研） | Rust | All | ✅ |
-| [leveldb](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/leveldb) | 键值存储引擎（本地元数据存储） | CMake | All | ✅ |
-| [sqlite3](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/sqlite3) | 轻量级关系数据库 | autotools | All | ✅ |
-
-### 计算层包（AI-TP OS 依赖）
-
-| Package | Description | Build System | Platforms | Status |
-| --- | --- | --- | --- | --- |
-| [ai-tp-scheduler](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ai-tp-scheduler) | AI-TP 分布式 AI 任务调度器（自研） | Rust | Linux / macOS | ✅ |
-| [ollama](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ollama) | 本地 LLM 推理服务 | Go | Linux / macOS | ✅ |
-| [localai](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/localai) | 本地 AI 推理引擎（fork） | CMake + Go | Linux / macOS | ✅ |
-| [ggml](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/ggml) | 轻量级张量计算库（llama.cpp 底层） | CMake | All | ✅ |
-
-### 开发工具
-
-| Package | Description | Build System | Platforms | Status |
-| --- | --- | --- | --- | --- |
-| [git](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/git) | 分布式版本控制系统 | autotools | All | ✅ |
-| [cmake](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/cmake) | 跨平台构建系统 | CMake | All | ✅ |
-| [curl](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/curl) | 命令行 HTTP 客户端 | autotools | All | ✅ |
-| [jq](https://github.com/ghshhf/glibc-packages/tree/master/gpkg/jq) | 命令行 JSON 处理器 | autotools | All | ✅ |
-
-<br >
-
-## 支持的平台与架构
-
-| Platform | Architectures | Toolchain | Status |
-| --- | --- | --- | --- |
-| **Linux** | x86_64, aarch64, i686 | GCC / Clang | ✅ |
-| **Android (Termux)** | aarch64, arm | Clang (NDK) | ✅ |
-| **Windows** | x86_64, i686 | MinGW-w64 (GCC) | ✅ |
-| **macOS** | x86_64, arm64 | Clang (Xcode) | ✅ |
-| **FreeBSD** | x86_64, aarch64 | Clang / GCC | ✅ |
-| **OpenBSD** | x86_64 | Clang | 📋 |
-| **NetBSD** | x86_64 | GCC | 📋 |
-
-<br >
-
-## 构建系统
-
-### 标准 6 步流水线
-
-```
-prepare → configure → build → install → post_install → package
-```
-
-### 构建系统自动识别
-
-| Method | Detection | Pipeline |
-| --- | --- | --- |
-| Autotools | `./configure` exists → `./configure && make && make install` | ✅ |
-| CMake | `CMakeLists.txt` exists 或 `TERMUX_PKG_FORCE_CMAKE=true` → CMake build | ✅ |
-| Meson | `meson.build` exists → Meson + ninja | ✅ |
-| Rust/Cargo | `Cargo.toml` exists → `cargo build --release` | ✅ |
-| Go | `go.mod` exists → `go build` | ✅ |
-| Custom Makefile | `Makefile` exists + `TERMUX_PKG_BUILD_IN_SRC=true` → `make && make install` | ✅ |
-| Shell script | 纯脚本项目 → 直接安装文件到目标目录 | ✅ |
-
-<br >
-
-## 项目结构
-
-```
-├── README.md                   # 项目说明与公共 API 索引
-├── CONTRIBUTING.md             # 贡献指南与包定义格式
-├── SECURITY.md                 # 安全策略
-├── LICENSE.md                  # 许可证
-├── repo.json                   # 仓库元数据（机器可读 API）
-├── big-pkgs.list               # 大型包清单
-├── AI-TP-OS-Architecture.md    # AI-TP OS 架构文档
-│
-├── build-cross.sh              # 跨平台构建主入口
-├── build-package.sh            # 单包构建脚本
-├── build-all.sh                # 一键多平台调度
-├── get-build-package.sh        # 构建脚本拉取工具
-├── generate-build-scripts.sh   # 构建脚本生成器
-├── install-deps.sh             # 构建依赖自动安装
-├── clean.sh                    # 构建产物清理
-│
-├── build-linux.sh              # Linux 平台构建
-├── build-android.sh            # Android/Termux 平台构建
-├── build-windows.sh            # Windows/MinGW 平台构建
-├── build-darwin.sh             # macOS 平台构建
-├── build-bsd.sh                # FreeBSD/OpenBSD 平台构建
-│
-├── cross-platform/             # 跨平台框架模块
-│   ├── platform-detect.sh      # 平台检测与配置
-│   ├── platforms/              # 各平台配置文件
-│   ├── toolchains/             # 工具链配置
-│   └── core/                   # 核心模块 (build-steps, pkg-adapter)
-│
-├── gpkg/                       # 包定义目录
-│   ├── zlib/                   # 每个包一个目录
-│   │   ├── build.sh            # 包元数据与构建变量
-│   │   └── *.patch             # 可选补丁文件
-│   ├── neofetch/
-│   ├── htop/
-│   └── ...
-│
-├── scripts/                    # 验证与测试脚本（与 public-apis 规范对齐）
-│   ├── validate/               # Python 验证模块
-│   │   └── format.py           # 包定义格式校验
-│   ├── tests/                  # Python 单元测试
-│   ├── requirements.txt        # Python 依赖
-│   └── README.md               # 脚本使用说明
-│
-└── .github/
-    ├── workflows/              # GitHub Actions 工作流
-    │   ├── test_of_push_and_pull.yml   # push/pull 触发的格式校验
-    │   └── validate_links.yml          # 定时链接校验
-    ├── ISSUE_TEMPLATE.md       # Issue 模板
-    └── PULL_REQUEST_TEMPLATE.md # PR 模板
-```
-
-<br >
-
-## 贡献指南
-
-欢迎提交新包、修复构建问题或改进文档！详见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-关键要点：
-- 包定义统一使用 `TERMUX_PKG_*` 变量规范
-- 每个 PR 在合并前会经过 format.py 格式校验
-- 包名使用 `-glibc` 后缀（glibc 本身除外）
-- 描述不超过 100 字符，不以标点结尾
-- 表格对齐遵循与 [public-apis](https://github.com/ghshhf/public-apis) 一致的 Markdown 规范
-
-<br >
-
-## 路线图
-
-| 阶段 | 时间 | 目标 |
-| --- | --- | --- |
-| **第一阶段：基础架构** | 1-2 月 | 实现统一 build-step 框架 + Termux 变量适配器 + 5 平台 CI 矩阵 |
-| **第二阶段：包生态扩展** | 2-3 月 | 补齐网络层、存储层、计算层依赖包（AI-TP OS 开发基础） |
-| **第三阶段：公共 API 发布** | 3-4 月 | 发布稳定的包元数据查询 API、在线包浏览器、Webhook 推送 |
-
-<br >
-
-## 许可证
-
-MIT License — 详见 [LICENSE.md](LICENSE.md)
-
-**维护者**: [@ghshhf](https://github.com/ghshhf)
+> **"标准即系统。系统即标准。"**  
+> 在 SkyNet 中，"标准化"不是目的——它是唯一的存在方式。

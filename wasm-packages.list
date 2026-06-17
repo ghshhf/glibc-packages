@@ -1,4 +1,4 @@
-# glibc-packages WebAssembly (WASM) — 可编译到浏览器的包列表
+# SkyNet WebAssembly (WASM) — 可编译到浏览器的包列表
 # 以 # 开头的行为注释，会被 build-wasm.sh --list 忽略
 #
 # 使用:

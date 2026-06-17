@@ -1,8 +1,11 @@
-# Contributing to glibc-packages
+# Contributing to SkyNet (天网)
 
-感谢你对 glibc-packages 的关注！本项目以 [public-apis](https://github.com/ghshhf/public-apis) 为规范参考，遵循一致的文档格式与贡献流程。
+感谢你对 SkyNet 的关注！本项目是 AI-TP 协议的开源基础设施，包含：
+- **包构建系统** — 跨平台 Termux 风格包构建（遵循 [public-apis](https://github.com/ghshhf/public-apis) 规范）
+- **SSI 标准架构** — 完全标准化的底层系统规范与 TypeScript 参考实现
+- **浏览器运行时** — SSI-KRN 内核运行时（browser-runtime/）
 
-> 本项目为手动维护的软件包列表，每个包的添加与更新都需要社区成员的参与。Pull Request 会在合并前经过格式校验（`scripts/validate/format.py`）。
+> 包贡献请遵循 `scripts/validate/format.py` 格式校验。SSI 组件贡献请参考 [SPEC-INTERFACE.md](SPEC-INTERFACE.md) 和 [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md)。
 
 <br >
 

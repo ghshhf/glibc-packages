@@ -1,4 +1,4 @@
-# SSI (System Standard Interface) v1.0 规范
+# SkyNet SSI (System Standard Interface) v1.0 规范
 
 > **统一接口规范——所有组件的通信语言。**  
 > 本文件是 SYSTEM-STANDARD.md 的配套详细规范，定义所有标准化接口的具体签名、数据结构和行为契约。

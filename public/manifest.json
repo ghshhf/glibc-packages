@@ -1,0 +1,24 @@
+{
+  "name": "SkyNet SSI Runtime",
+  "short_name": "SkyNet",
+  "description": "SkyNet SSI Runtime Dashboard — system status, component management, real-time logs",
+  "start_url": "/test/browser-test.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#0d1117",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/android/app/src/main/res/drawable/icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android/app/src/main/res/drawable/icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "zh-CN"
+}

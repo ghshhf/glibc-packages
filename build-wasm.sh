@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# build-wasm.sh — WASM/浏览器平台构建快捷脚本
+# build-wasm.sh — SkyNet WASM/浏览器平台构建快捷脚本
 # =============================================================================
 # 基于 build-cross.sh 的封装，自动设置 browser 平台和 emscripten 工具链。
 #
@@ -140,7 +140,7 @@ post_process_npm() {
         fi
     done
 
-    echo "[NPM] 全部包已收集到: ${npm_out}"
+    echo "  [NPM] 包已收集到: ${npm_out}"
     ls -lh "${npm_out}" 2>/dev/null || true
 
     # 生成 package.json registry

@@ -1,6 +1,6 @@
-# AI-TP OS 架构文档
+# SkyNet (天网) AI-TP OS 架构文档
 
-> **AI-Native Decentralized Operating System**  
+> **SkyNet — AI-Native Decentralized Operating System**  
 > 一个面向所有设备的底层系统：网络层、存储层、计算层三位一体  
 > **标准化架构 🌐 SSI v1.0 — 参见 [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md)**
 

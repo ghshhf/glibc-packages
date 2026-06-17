@@ -1,7 +1,7 @@
 {
-  "name": "@ai-tp-os/swbn-packager",
+  "name": "@skynet/swbn-packager",
   "version": "1.0.0",
-  "description": "SWBN Packager — CLI tool for creating, signing, and verifying .swbn component archives",
+  "description": "SkyNet SWBN Packager — CLI tool for creating, signing, and verifying .swbn component archives",
   "main": "src/index.ts",
   "bin": {
     "swbn": "./src/index.ts"
@@ -9,6 +9,6 @@
   "scripts": {
     "build": "echo 'SWBN packager ready'"
   },
-  "keywords": ["swbn", "packager", "cli", "ai-tp-os"],
+  "keywords": ["swbn", "packager", "cli", "skynet"],
   "license": "MIT"
 }

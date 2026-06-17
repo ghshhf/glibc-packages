@@ -1,7 +1,7 @@
 {
-  "name": "@glibc-packages/browser-runtime",
+  "name": "@skynet/browser-runtime",
   "version": "1.0.0",
-  "description": "glibc-packages browser/WebAssembly runtime. Loads and runs WASM-compiled C/C++ libraries in browsers, Node.js, and Web Workers.",
+  "description": "SkyNet SSI-KRN Runtime Kernel: loads and runs .swbn components in browser/Node.js/Worker environments",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

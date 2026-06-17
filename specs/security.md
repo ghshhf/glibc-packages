@@ -1,4 +1,4 @@
-# SSI 安全模型规范
+# SkyNet SSI 安全模型规范
 
 > **System Standard Security Model** — 分层安全架构与权限体系。
 

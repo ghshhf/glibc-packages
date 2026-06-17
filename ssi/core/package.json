@@ -1,12 +1,12 @@
 {
-  "name": "@ai-tp-os/ssi-core",
+  "name": "@skynet/ssi-core",
   "version": "1.0.0",
-  "description": "SSI-CORE: Component Core — base interfaces, lifecycle management, component registry for AI-TP OS",
+  "description": "SkyNet SSI-CORE: Component Core — base interfaces, lifecycle management, component registry",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
     "test": "echo 'SSI-CORE: OK'"
   },
-  "keywords": ["ssi", "ai-tp-os", "component", "lifecycle"],
+  "keywords": ["ssi", "skynet", "component", "lifecycle"],
   "license": "MIT"
 }

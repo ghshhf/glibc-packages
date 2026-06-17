@@ -1,35 +1,32 @@
-<!-- 感谢你提交 Pull Request！为确保你的修改能被快速处理，请在提交前完成以下检查。 -->
+<!-- 感谢你为 SkyNet (天网) 提交 Pull Request！ -->
 
 ## PR 类型
 
-- [ ] 新增包（Add a new package）
-- [ ] 更新包（Update an existing package）
+- [ ] 新增组件/包
+- [ ] 更新组件/包
+- [ ] SSI 接口实现
 - [ ] Bug 修复
-- [ ] 文档改进（README / CONTRIBUTING / 其他）
+- [ ] 文档改进（README / SPEC / SYSTEM-STANDARD）
 - [ ] 构建脚本改进
-- [ ] 验证脚本改进
+- [ ] 运行时改进（browser-runtime / SSI-KRN）
 - [ ] CI/CD 配置更新
 - [ ] 其他
 
 ## 变更说明
 
-<!-- 简要描述此 PR 做了什么修改。 -->
+<!-- 简要描述此 PR 做了什么修改，以及为什么需要这个修改。 -->
 
 ## 相关 Issue
 
-<!-- 如有相关 Issue，请在此处引用：`Fixes #123` 或 `Closes #456`。没有则留空。 -->
+<!-- 如有相关 Issue，请在此处引用：`Fixes #123`。 -->
 
 ## Checklist
 
-- [ ] 我的提交信息遵循项目规范：`Add <package-name>` 或 `Update <package-name>` 或 `fix: <description>`
-- [ ] 我已在本地运行 `python3 scripts/validate/format.py README.md`，无报错
-- [ ] 我已将变更的包按字母顺序插入到正确的分类下
-- [ ] 每个表格列前后各有一个空格（`| Content |`）
-- [ ] 描述不超过 100 字符，不以标点结尾
-- [ ] `build.sh`（如有）遵循 `TERMUX_PKG_*` 字段规范
-- [ ] `TERMUX_PKG_SHA256`（如有）与源码 tarball 校验和匹配
-- [ ] 依赖项使用 `-glibc` 后缀（glibc 本身除外）
-- [ ] 我已搜索过是否有相关的 PR 或 Issue
+- [ ] 我的提交信息遵循项目规范
+- [ ] 如果是 SSI 接口实现，已参考 SPEC-INTERFACE.md
+- [ ] 如果是新组件，已包含 manifest.json 和签名
+- [ ] 我已在本地验证修改不会破坏现有功能
+- [ ] 文档已同步更新（如需）
 
 ## 额外信息
 

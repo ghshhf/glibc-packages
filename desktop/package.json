@@ -1,0 +1,54 @@
+{
+  "name": "skynet-desktop",
+  "version": "1.0.0",
+  "description": "SkyNet SSI Runtime Desktop Dashboard — system status, component management, real-time logs",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64",
+    "pack": "electron-builder --dir"
+  },
+  "build": {
+    "appId": "org.ai-tp.skynet",
+    "productName": "SkyNet SSI Runtime",
+    "directories": {
+      "output": "../dist"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "../browser-runtime/dist/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SkyNet SSI Runtime",
+      "include": "src/installer.nsh"
+    },
+    "extraResources": [
+      {
+        "from": "../browser-runtime/dist/",
+        "to": "runtime/",
+        "filter": ["**/*"]
+      }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "electron-log": "^5.0.0"
+  }
+}

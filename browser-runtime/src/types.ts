@@ -1,5 +1,5 @@
 /**
- * glibc-packages Browser Runtime — Core Types
+ * SkyNet SSI-KRN — Core Types
  *
  * Defines the common types used across the WASM module loader,
  * virtual filesystem, networking, and threading modules.

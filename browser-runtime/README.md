@@ -1,6 +1,6 @@
-# AI-TP OS SSI-KRN: WASM Runtime Kernel
+# SkyNet SSI-KRN: WASM Runtime Kernel
 
-这是 AI-TP OS 的 **SSI-KRN 运行时内核**。  
+这是 **SkyNet (天网)** 的 SSI-KRN 运行时内核。  
 它实现 [SSI (System Standard Interface)](../SPEC-INTERFACE.md) v1.0 规范中的 **SSI-CORE** 和 **SSI-KRN** 接口。
 
 **浏览器不是移植目标——它是系统的原生运行模式之一。**
@@ -17,7 +17,7 @@
 
 ## 标准化架构
 
-本运行时是 AI-TP OS 系统标准架构的一部分：
+本运行时是 SkyNet 系统标准架构的一部分：
 
 ```
 SYSTEM-STANDARD.md   ← 系统标准架构（本文档）
@@ -60,7 +60,7 @@ const mod = await loadWasm({
 
 ## 运行模式
 
-本运行时在所有 AI-TP OS 支持的平台上以统一方式运行：
+本运行时在所有 SkyNet 支持的平台上以统一方式运行：
 
 | 模式 | 运行环境 | 技术栈 |
 |------|---------|--------|
@@ -70,4 +70,4 @@ const mod = await loadWasm({
 
 ## License
 
-MIT — 属于 AI-TP OS 项目的一部分
+MIT — 属于 SkyNet (天网) 项目的一部分

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkyNet SSI Runtime</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; padding: 16px; }
+.header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.logo { width: 40px; height: 40px; background: linear-gradient(135deg, #58a6ff, #3fb950); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; color: #fff; flex-shrink: 0; }
+.title { font-size: 18px; font-weight: 600; color: #e6edf3; }
+.subtitle { font-size: 12px; color: #8b949e; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+.card-title { font-size: 12px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 12px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-item { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 12px; text-align: center; }
+.stat-value { font-size: 20px; font-weight: 700; color: #e6edf3; }
+.stat-label { font-size: 10px; color: #8b949e; text-transform: uppercase; margin-top: 4px; }
+.btn-row { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+.btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 10px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; flex: 1; text-align: center; min-width: 80px; }
+.btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+.btn-danger { background: #da3633; border-color: #f85149; color: #fff; }
+.log-area { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 8px; font-family: monospace; font-size: 11px; height: 200px; overflow-y: auto; white-space: pre-wrap; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+#status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+#status-dot.running { background: #3fb950; }
+#status-dot.stopped { background: #f85149; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">S</div>
+  <div>
+    <div class="title">SkyNet SSI Runtime</div>
+    <div class="subtitle">v1.0.0 • <span id="device-info">Android</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">System Status</div>
+  <div class="stat-grid">
+    <div class="stat-item"><div class="stat-value" id="s-status"><span id="status-dot" class="stopped"></span>Offline</div><div class="stat-label">Status</div></div>
+    <div class="stat-item"><div class="stat-value" id="s-version">1.0.0</div><div class="stat-label">Version</div></div>
+    <div class="stat-item"><div class="stat-value" id="s-model">-</div><div class="stat-label">Device</div></div>
+    <div class="stat-item"><div class="stat-value" id="s-android">-</div><div class="stat-label">Android</div></div>
+  </div>
+</div>
+
+<div class="btn-row">
+  <div class="btn btn-primary" onclick="startRuntime()">▶ Start</div>
+  <div class="btn" onclick="exportLogs()">📤 Export</div>
+  <div class="btn btn-danger" onclick="stopRuntime()">⏹ Stop</div>
+</div>
+
+<div class="card">
+  <div class="card-title">Runtime Log <span style="float:right;font-weight:normal;font-size:10px;" id="log-count">0 lines</span></div>
+  <div class="log-area" id="log-area">
+[SkyNet] Initializing...
+  </div>
+</div>
+
+<script>
+let running = false;
+let logCount = 0;
+
+function log(level, msg) {
+  const area = document.getElementById('log-area');
+  const time = new Date().toLocaleTimeString();
+  area.innerHTML += `\n[${time}] [${level}] ${msg}`;
+  area.scrollTop = area.scrollHeight;
+  logCount++;
+  document.getElementById('log-count').textContent = logCount + ' lines';
+
+  try { SkyNetBridge.log(level, msg); } catch(e) {}
+}
+
+function startRuntime() {
+  if (running) return;
+  running = true;
+  document.getElementById('s-status').innerHTML = '<span id="status-dot" class="running"></span>Running';
+  document.getElementById('status-dot').className = 'running';
+  log('INFO', 'SSI Runtime started');
+}
+
+function stopRuntime() {
+  if (!running) return;
+  running = false;
+  document.getElementById('s-status').innerHTML = '<span id="status-dot" class="stopped"></span>Offline';
+  document.getElementById('status-dot').className = 'stopped';
+  log('WARN', 'SSI Runtime stopped');
+}
+
+function exportLogs() {
+  log('INFO', 'Exporting logs...');
+  try {
+    const logs = SkyNetBridge.getLogs();
+    log('SUCCESS', 'Logs exported (' + logs.length + ' chars)');
+  } catch(e) {
+    log('ERROR', 'Export failed: ' + e.message);
+  }
+}
+
+// Init
+try {
+  const info = JSON.parse(SkyNetBridge.getDeviceInfo());
+  document.getElementById('s-model').textContent = info.model;
+  document.getElementById('s-android').textContent = 'Android ' + info.androidVersion;
+  log('INFO', 'Device: ' + info.manufacturer + ' ' + info.model);
+  log('INFO', 'Android: ' + info.androidVersion + ' (API ' + info.apiLevel + ')');
+} catch(e) {
+  log('WARN', 'Device info unavailable');
+}
+
+log('SUCCESS', 'SkyNet SSI Runtime v1.0.0 ready');
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# SSI IPC 总线规范
+# SkyNet SSI IPC 总线规范
 
 > **Inter-Component Communication** — 系统组件间所有通信的标准化总线协议。
 

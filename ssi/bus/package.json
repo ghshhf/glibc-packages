@@ -1,12 +1,12 @@
 {
-  "name": "@ai-tp-os/ssi-bus",
+  "name": "@skynet/ssi-bus",
   "version": "1.0.0",
-  "description": "SSI Service Bus — IPC message protocol, priority queue, routing for AI-TP OS",
+  "description": "SkyNet SSI Service Bus — IPC message protocol, priority queue, routing",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@ai-tp-os/ssi-core": "1.0.0"
+    "@skynet/ssi-core": "1.0.0"
   },
-  "keywords": ["ssi", "ipc", "message-bus", "ai-tp-os"],
+  "keywords": ["ssi", "ipc", "message-bus", "skynet"],
   "license": "MIT"
 }

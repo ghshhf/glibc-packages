@@ -1,11 +1,11 @@
 /**
- * AI-TP OS SSI-KRN: WASM Runtime Kernel
+ * SkyNet SSI-KRN: WASM Runtime Kernel
  *
  * Standard WASM Runtime implementation of the SSI-KRN interface.
  * Loads, manages, and executes .swbn standard components across all
  * platforms (browser, Node.js, Web Workers).
  *
- * This is the **runtime kernel** of the AI-TP OS — it provides the
+ * This is the **runtime kernel** of SkyNet (天网) — it provides the
  * WASM execution environment that all system components run on top of.
  *
  * SSI Interfaces implemented:
@@ -148,7 +148,7 @@ export class SsiRuntime {
   private _initialize(): void {
     if (this._initialized) return;
 
-    this.log.info(`AI-TP OS SSI-KRN Runtime v1.0.0`);
+    this.log.info(`SkyNet SSI-KRN Runtime v1.0.0`);
     this.log.info(`Environment: ${this.environment}`);
     this.log.info(`Config: ${JSON.stringify(this.config)}`);
 
@@ -237,7 +237,7 @@ export class SsiRuntime {
   getSummary(): string {
     const lines = [
       '╔═══════════════════════════════════════╗',
-      '║  AI-TP OS SSI-KRN Runtime              ║',
+      '║  SkyNet SSI-KRN Runtime              ║',
       '╠═══════════════════════════════════════╣',
       `║  Environment: ${this.environment.padEnd(24)}║`,
       `║  WASM Modules: ${String(this.wasm.cacheSize).padEnd(21)}║`,
