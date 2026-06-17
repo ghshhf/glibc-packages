@@ -338,7 +338,7 @@ export class ThreadPool {
 
         if (type === 'spawn') {
           try {
-            const fn = eval('(' + func + ')');
+            const fn = new Function('return (' + func + ')')();
             const result = fn.apply(null, args);
             self.postMessage({ type: 'complete', threadId, result });
           } catch (error) {

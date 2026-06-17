@@ -313,18 +313,63 @@ export class WasmModuleManager {
 
   /** Build minimal WASI imports */
   private buildWasiImports(): Record<string, Function> {
+    const wasiCtx = {
+      stdout: '',
+      stderr: '',
+      fds: new Map<number, { type: 'stdout' | 'stderr' | 'stdin'; buffer: string }>(),
+    };
+    wasiCtx.fds.set(1, { type: 'stdout', buffer: '' });
+    wasiCtx.fds.set(2, { type: 'stderr', buffer: '' });
+
     return {
-      fd_write: () => 0,
+      // fd_write: write to stdout/stderr
+      fd_write: (fd: number, iovs: number, iovsLen: number, nwritten: number) => {
+        const mem = (this as any).exports?.memory;
+        if (!mem) return 0;
+        const view = new DataView(mem.buffer);
+        let total = 0;
+        for (let i = 0; i < iovsLen; i++) {
+          const buf = view.getUint32(iovs + i * 8, true);
+          const len = view.getUint32(iovs + i * 8 + 4, true);
+          const bytes = new Uint8Array(mem.buffer, buf, len);
+          const str = new TextDecoder().decode(bytes);
+          if (fd === 1) console.log(str);
+          else if (fd === 2) console.warn(str);
+          total += len;
+        }
+        if (nwritten) {
+          const mem2 = (this as any).exports?.memory;
+          if (mem2) new DataView(mem2.buffer).setUint32(nwritten, total, true);
+        }
+        return 0;
+      },
       fd_read: () => 0,
       fd_close: () => 0,
       fd_seek: () => 0,
-      proc_exit: () => {},
+      proc_exit: (code: number) => { console.warn(`[WASI] proc_exit(${code})`); },
       environ_get: () => 0,
       environ_sizes_get: () => 0,
       args_get: () => 0,
       args_sizes_get: () => 0,
-      clock_time_get: () => 0,
-      random_get: () => 0,
+      clock_time_get: (id: number, precision: bigint, time: number) => {
+        if (time) {
+          const mem = (this as any).exports?.memory;
+          if (mem) {
+            const view = new DataView(mem.buffer);
+            const now = BigInt(Date.now()) * 1000000n; // microseconds
+            view.setBigUint64(time, now, true);
+          }
+        }
+        return 0;
+      },
+      random_get: (buf: number, len: number) => {
+        const mem = (this as any).exports?.memory;
+        if (mem) {
+          const bytes = new Uint8Array(mem.buffer, buf, len);
+          crypto.getRandomValues(bytes);
+        }
+        return 0;
+      },
     };
   }
 

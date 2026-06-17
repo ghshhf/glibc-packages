@@ -79,7 +79,12 @@ public class MainActivity extends AppCompatActivity {
 
             // Write to app-specific log file
             try {
-                File logDir = new File(getExternalFilesDir(null), "logs");
+                File extDir = getExternalFilesDir(null);
+                if (extDir == null) {
+                    // Fallback: write to internal cache
+                    extDir = getCacheDir();
+                }
+                File logDir = new File(extDir, "logs");
                 if (!logDir.exists()) logDir.mkdirs();
                 File logFile = new File(logDir, "skynet.log");
                 FileWriter fw = new FileWriter(logFile, true);
@@ -112,6 +117,15 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void showToast(String message) {
             runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show());
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView.canGoBack()) {
+            webView.goBack();
+        } else {
+            super.onBackPressed();
         }
     }
 }

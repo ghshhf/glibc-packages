@@ -13,6 +13,7 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "test": "node dist/test.js",
+    "build:all": "tsc && node scripts/bundle-browser.mjs",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -20,7 +21,7 @@
     "webassembly",
     "emscripten",
     "browser",
-    "glibc-packages",
+    "skynet",
     "virtual-fs",
     "cross-platform"
   ],
@@ -30,38 +31,20 @@
     "url": "https://github.com/ghshhf/glibc-packages.git",
     "directory": "browser-runtime"
   },
-  "dependencies": {},
+  "dependencies": {
+    "ws": "^8.0.0"
+  },
   "peerDependencies": {},
   "devDependencies": {
     "typescript": "^5.0.0"
   },
-  "browser": {
-    "./dist/index.js": "./dist/index.browser.js",
-    "./dist/virtual-fs.js": "./dist/virtual-fs.browser.js",
-    "./dist/networking.js": "./dist/networking.browser.js"
-  },
   "exports": {
     ".": {
-      "browser": "./dist/index.browser.js",
-      "node": "./dist/index.js",
-      "worker": "./dist/index.worker.js",
       "default": "./dist/index.js"
     },
-    "./wasm-loader": {
-      "browser": "./dist/wasm-loader.browser.js",
-      "node": "./dist/wasm-loader.js",
-      "default": "./dist/wasm-loader.js"
-    },
-    "./virtual-fs": {
-      "browser": "./dist/virtual-fs.browser.js",
-      "node": "./dist/virtual-fs.js",
-      "default": "./dist/virtual-fs.js"
-    },
-    "./networking": {
-      "browser": "./dist/networking.browser.js",
-      "node": "./dist/networking.js",
-      "default": "./dist/networking.js"
-    },
+    "./wasm-loader": "./dist/wasm-loader.js",
+    "./virtual-fs": "./dist/virtual-fs.js",
+    "./networking": "./dist/networking.js",
     "./threading": "./dist/threading.js"
   }
 }

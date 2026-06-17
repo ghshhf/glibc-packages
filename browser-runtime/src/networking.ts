@@ -156,11 +156,12 @@ export class BrowserNetworkImpl implements BrowserNetwork {
     // Rough estimate by measuring download time
     const start = performance.now();
     try {
-      const response = await this.fetch('https://www.google.com/generate_204', {
-        method: 'HEAD',
+      // Use GitHub API (accessible globally) instead of google.com/generate_204
+      const response = await this.fetch('https://api.github.com/zen', {
+        method: 'GET',
       });
       const timing = performance.now() - start;
-      // Rough: assume 1KB response, speed = 1KB / time
+      // GitHub zen returns ~10-20 bytes, use 1KB as estimate
       return Math.max(1000, (1024 * 8) / (timing / 1000)); // bits per second
     } catch {
       return 1000000; // default 1 Mbps fallback

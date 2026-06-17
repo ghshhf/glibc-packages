@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell, Tray, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 let mainWindow;
 let LOG_DIR;
@@ -92,8 +93,30 @@ function createWindow() {
 
 // ── IPC Handlers ──
 
+let _lastCpuUsage = null;
+let _lastCpuTime = null;
+
 // System info
 ipcMain.handle('get-system-info', () => {
+  const cpuUsage = process.cpuUsage();
+  const now = Date.now();
+  const cpuCores = os.cpus().length;
+
+  // Calculate CPU percentage over interval
+  let cpuPercent = 0;
+  if (_lastCpuUsage && _lastCpuTime) {
+    const elapsed = now - _lastCpuTime; // ms
+    if (elapsed > 0) {
+      const userDelta = cpuUsage.user - _lastCpuUsage.user;
+      const sysDelta = cpuUsage.system - _lastCpuUsage.system;
+      const totalDelta = userDelta + sysDelta; // microseconds
+      // Convert to percentage: (microseconds used) / (elapsed ms * 1000 * cores)
+      cpuPercent = Math.min(100, (totalDelta / (elapsed * 1000 * cpuCores)) * 100);
+    }
+  }
+  _lastCpuUsage = cpuUsage;
+  _lastCpuTime = now;
+
   return {
     appName: APP_NAME,
     appVersion: APP_VERSION,
@@ -103,7 +126,8 @@ ipcMain.handle('get-system-info', () => {
     node: process.versions.node,
     chrome: process.versions.chrome,
     v8: process.versions.v8,
-    cpuUsage: process.cpuUsage(),
+    cpuUsage: cpuPercent,
+    cpuCores: cpuCores,
     memoryUsage: process.memoryUsage(),
     uptime: process.uptime(),
   };
@@ -180,8 +204,36 @@ async function exportLogs() {
   }
 }
 
+// ── System Tray ──
+let tray = null;
+
+function createTray() {
+  const iconPath = path.join(__dirname, '..', 'public', 'icon.png');
+  try {
+    const icon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+    tray = new Tray(icon);
+    tray.setToolTip(APP_NAME);
+    const contextMenu = Menu.buildFromTemplate([
+      { label: `Show ${APP_NAME}`, click: () => { if (mainWindow) mainWindow.show(); } },
+      { type: 'separator' },
+      { label: 'Quit', click: () => { app.quit(); } },
+    ]);
+    tray.setContextMenu(contextMenu);
+    tray.on('click', () => {
+      if (mainWindow) {
+        mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+      }
+    });
+  } catch (e) {
+    console.warn('Tray creation failed (non-fatal):', e.message);
+  }
+}
+
 // ── App Lifecycle ──
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createTray();
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -189,4 +241,9 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// Minimize to tray instead of closing when tray is active
+app.on('before-quit', () => {
+  // Allow normal quit
 });
