@@ -1,0 +1,12 @@
+{
+  "name": "@skynet/ssi-hal",
+  "version": "1.0.0",
+  "description": "SkyNet SSI-HAL: Hardware Abstraction Layer — device info, sensors, battery, network, display",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@skynet/ssi-core": "1.0.0"
+  },
+  "keywords": ["ssi", "hal", "hardware", "device", "skynet"],
+  "license": "MIT"
+}

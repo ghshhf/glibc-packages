@@ -1,0 +1,12 @@
+{
+  "name": "@skynet/ssi-ai",
+  "version": "1.0.0",
+  "description": "SkyNet SSI-AI: Compute Engine — task queue, model registry, local inference, resource reporting",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@skynet/ssi-core": "1.0.0"
+  },
+  "keywords": ["ssi", "ai", "compute", "inference", "skynet"],
+  "license": "MIT"
+}

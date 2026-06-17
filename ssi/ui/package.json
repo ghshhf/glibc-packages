@@ -1,0 +1,12 @@
+{
+  "name": "@skynet/ssi-ui",
+  "version": "1.0.0",
+  "description": "SkyNet SSI-UI: Window Manager — window management, compositing, input routing",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@skynet/ssi-core": "1.0.0"
+  },
+  "keywords": ["ssi", "window-manager", "compositor", "input", "skynet"],
+  "license": "MIT"
+}

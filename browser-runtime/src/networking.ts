@@ -110,8 +110,8 @@ export class BrowserNetworkImpl implements BrowserNetwork {
     // Create new connection
     let ws: WebSocket;
     if (this.env === 'node') {
-      // Node.js: require 'ws' dynamically
-      const WebSocketImpl = require('ws');
+      // Node.js: dynamically require 'ws' — cast to any for Node ESM compatibility
+      const WebSocketImpl = (Function('return require("ws")')()) as unknown as typeof WebSocket;
       ws = new WebSocketImpl(url, protocols) as unknown as WebSocket;
     } else {
       ws = new WebSocket(url, protocols);

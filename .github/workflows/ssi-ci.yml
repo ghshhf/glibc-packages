@@ -1,0 +1,91 @@
+name: SSI Framework CI
+
+on:
+  push:
+    paths:
+      - 'ssi/**'
+      - 'browser-runtime/**'
+      - '.github/workflows/ssi-ci.yml'
+  pull_request:
+    paths:
+      - 'ssi/**'
+      - 'browser-runtime/**'
+      - '.github/workflows/ssi-ci.yml'
+  # Daily scheduled run to catch regressions
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            ssi/package-lock.json
+            browser-runtime/package-lock.json
+
+      # ── SSI Framework ──
+      - name: Install SSI dependencies
+        working-directory: ssi
+        run: npm ci
+
+      - name: Type-check SSI
+        working-directory: ssi
+        run: npx tsc --noEmit
+
+      - name: Run SSI unit tests
+        working-directory: ssi
+        run: npx vitest run
+
+      # ── Browser Runtime ──
+      - name: Install browser-runtime dependencies
+        working-directory: browser-runtime
+        run: npm ci
+
+      - name: Type-check browser-runtime
+        working-directory: browser-runtime
+        run: npx tsc --noEmit
+
+      - name: Build browser-runtime
+        working-directory: browser-runtime
+        run: npx tsc
+
+      # ── Build demo SWBN component ──
+      - name: Build demo SWBN component
+        working-directory: ssi
+        run: npx tsx build-demo-swbn.ts
+
+      # ── Verify demo runs ──
+      - name: Run SSI integration demo
+        working-directory: ssi
+        run: npx tsx ../ssi/demo/demo.ts
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install SSI dependencies
+        working-directory: ssi
+        run: npm ci
+
+      - name: Lint check (tsc strict)
+        working-directory: ssi
+        run: npx tsc --noEmit --strict

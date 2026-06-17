@@ -1,0 +1,12 @@
+{
+  "name": "@skynet/ssi-sec",
+  "version": "1.0.0",
+  "description": "SkyNet SSI-SEC: Security Module — identity keys, encryption, permissions, audit logging",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@skynet/ssi-core": "1.0.0"
+  },
+  "keywords": ["ssi", "security", "crypto", "permissions", "skynet"],
+  "license": "MIT"
+}

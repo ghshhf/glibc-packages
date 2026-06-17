@@ -35,7 +35,7 @@
 import { WasmModuleManager, loadWasm } from './wasm-loader';
 import { VirtualFS } from './virtual-fs';
 import { BrowserNetworkImpl } from './networking';
-import { ThreadPool, WasmMutex, WasmConditionVariable } from './threading';
+import { ThreadPool, WasmMutex, WasmConditionVariable, ThreadHandle } from './threading';
 import {
   Logger,
   RuntimeConfig,
@@ -56,20 +56,17 @@ export {
 
   // SSI-KRN: Threading
   ThreadPool, WasmMutex, WasmConditionVariable,
+};
 
-  // SSI-CORE: Runtime kernel
-  SsiRuntime, SSI_COMPONENT_STATE,
-
-  // Types
+export type {
   Logger, formatBytes, detectEnvironment, RuntimeConfig,
 };
 
 export type {
-  SsiComponentHandle,
   WasmModuleOptions, WasmModuleResult, WasmModuleHooks,
   VirtualFileSystem, FileStat, FsBackend,
   BrowserNetwork,
-  ThreadPoolConfig, ThreadHandle,
+  ThreadPoolConfig,
 } from './types';
 
 /**

@@ -289,7 +289,7 @@ export class VirtualFS implements VirtualFileSystem {
     if (typeof data === 'string') {
       await writable.write(new TextEncoder().encode(data));
     } else {
-      await writable.write(data);
+      await writable.write(new Uint8Array(data));
     }
     await writable.close();
   }

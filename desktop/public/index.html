@@ -208,11 +208,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 <script>
 // =========================================================================
-// SkyNet SSI Runtime Dashboard — Renderer
+// SkyNet SSI Runtime Dashboard — Renderer (SSI Runtime Integrated)
 // =========================================================================
 const skynet = window.skynet;
 let logCount = 0;
 let runtimeRunning = false;
+let refreshTimer = null;
 
 // ── Tab Switching ──
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -289,28 +290,94 @@ async function refreshSystemInfo() {
   `;
 }
 
+// ── SSI Components Refresh ──
+async function refreshComponents() {
+  if (!skynet || !runtimeRunning) return;
+  const status = await skynet.runtimeStatus();
+  const components = await skynet.runtimeComponents();
+
+  if (status && status.running) {
+    document.getElementById('stat-components').textContent = components.length;
+  }
+
+  const list = document.getElementById('component-list');
+  if (!components || components.length === 0) {
+    list.innerHTML = '<div style="padding:16px;color:#8b949e;font-size:13px;">No components registered.</div>';
+    return;
+  }
+
+  list.innerHTML = components.map(c => {
+    const stateClass = c.state === 'RUNNING' ? 'running' : c.state === 'READY' ? 'ready' : 'stopped';
+    return `<div class="component-item">
+      <span class="comp-name">${escapeHtml(c.name)}</span>
+      <span class="comp-type">${escapeHtml(c.type)}</span>
+      <span class="comp-state ${stateClass}">${c.state}</span>
+    </div>`;
+  }).join('');
+}
+
 // ── Actions ──
 window._actions = {
-  startRuntime: () => {
+  startRuntime: async () => {
     if (runtimeRunning) return;
-    runtimeRunning = true;
-    document.getElementById('status-label').textContent = 'Running';
-    document.getElementById('status-dot').className = 'status-dot';
-    addLog('SUCCESS', 'SSI Runtime started');
-    document.getElementById('stat-components').textContent = '5';
+    if (!skynet) {
+      addLog('WARN', 'IPC bridge not available (running outside Electron?)');
+      runtimeRunning = true;
+      document.getElementById('status-label').textContent = 'Running (mock)';
+      document.getElementById('status-dot').className = 'status-dot';
+      document.getElementById('stat-components').textContent = '4';
+      addLog('SUCCESS', 'SSI Runtime started (mock mode)');
+      return;
+    }
+
+    addLog('INFO', 'Initializing SSI Runtime...');
+    const result = await skynet.runtimeInit();
+    if (result.ok) {
+      runtimeRunning = true;
+      document.getElementById('status-label').textContent = 'Running';
+      document.getElementById('status-dot').className = 'status-dot';
+      addLog('SUCCESS', 'SSI Runtime initialized');
+      // Refresh component list
+      await refreshComponents();
+      // Start periodic status refresh
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = setInterval(refreshComponents, 5000);
+    } else {
+      addLog('ERROR', `Runtime init failed: ${result.error}`);
+      document.getElementById('status-label').textContent = 'Init Failed';
+      document.getElementById('status-dot').className = 'status-dot error';
+    }
   },
 
-  stopRuntime: () => {
+  stopRuntime: async () => {
     if (!runtimeRunning) return;
+    if (skynet) {
+      await skynet.runtimeStop();
+    }
     runtimeRunning = false;
     document.getElementById('status-label').textContent = 'Stopped';
     document.getElementById('status-dot').className = 'status-dot error';
-    addLog('WARN', 'SSI Runtime stopped');
     document.getElementById('stat-components').textContent = '0';
+    document.getElementById('component-list').innerHTML =
+      '<div style="padding:16px;color:#8b949e;font-size:13px;">No components registered.</div>';
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    addLog('WARN', 'SSI Runtime stopped');
   },
 
-  loadComponent: () => {
-    addLog('INFO', 'Load component dialog (coming soon)');
+  loadComponent: async () => {
+    if (!skynet) {
+      addLog('WARN', 'IPC bridge not available');
+      return;
+    }
+    addLog('INFO', 'Opening component selector...');
+    const result = await skynet.runtimeLoadComponent();
+    if (result.ok) {
+      addLog('SUCCESS', `Component loaded: ${result.component.name} v${result.component.version} (${result.component.type})`);
+      addLog('INFO', `Interfaces: ${result.component.interfaces?.provides?.join(', ') || 'none'}`);
+      await refreshComponents();
+    } else if (!result.canceled) {
+      addLog('ERROR', `Failed to load: ${result.error}`);
+    }
   },
 
   exportLogs: async () => {
@@ -343,7 +410,6 @@ window._actions = {
       setTimeout(() => { btn.textContent = orig; }, 2000);
       addLog('SUCCESS', `Copied ${entries.length} log entries to clipboard`);
     }).catch(err => {
-      // Fallback for environments without clipboard API
       const ta = document.createElement('textarea');
       ta.value = text;
       document.body.appendChild(ta);
@@ -410,7 +476,6 @@ async function showLogFile(name) {
 
 // ── Init ──
 skynet.onAppReady((data) => {
-  // Load saved settings
   window._actions.loadSettings();
 
   document.getElementById('version-label').textContent = `v${data.version}`;
@@ -423,9 +488,21 @@ skynet.onAppReady((data) => {
   setInterval(refreshSystemInfo, 5000);
 });
 
-// Auto-start
+// Listen for menu-triggered runtime actions
+skynet.onRuntimeInitRequest(() => window._actions.startRuntime());
+skynet.onRuntimeStopRequest(() => window._actions.stopRuntime());
+
+// Auto-start — respect saved setting
 setTimeout(() => {
-  window._actions.startRuntime();
+  try {
+    const raw = localStorage.getItem('skynet-settings');
+    const autostart = raw ? JSON.parse(raw).autostart : true;
+    if (autostart) {
+      window._actions.startRuntime();
+    }
+  } catch {
+    window._actions.startRuntime();
+  }
 }, 500);
 </script>
 </body>

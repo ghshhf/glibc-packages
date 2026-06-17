@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+const runtimeBridge = require('./runtime-bridge');
+
 let mainWindow;
 let LOG_DIR;
 
@@ -12,7 +14,6 @@ const APP_VERSION = '1.0.0';
 
 // ── Create main window ──
 function createWindow() {
-  // Ensure log directory (safe: called after app is ready)
   LOG_DIR = path.join(app.getPath('userData'), 'logs');
   if (!fs.existsSync(LOG_DIR)) {
     fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -47,7 +48,6 @@ function createWindow() {
     });
   });
 
-  // Build menu
   const menuTemplate = [
     {
       label: 'SkyNet',
@@ -66,6 +66,31 @@ function createWindow() {
         { role: 'resetZoom' },
         { role: 'zoomIn' },
         { role: 'zoomOut' },
+      ],
+    },
+    {
+      label: 'Runtime',
+      submenu: [
+        {
+          label: 'Initialize SSI Runtime',
+          click: () => {
+            mainWindow.webContents.send('runtime-init-request');
+          },
+        },
+        {
+          label: 'Stop SSI Runtime',
+          click: () => {
+            mainWindow.webContents.send('runtime-stop-request');
+          },
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle Runtime Panel',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            mainWindow.webContents.send('runtime-toggle-panel');
+          },
+        },
       ],
     },
     {
@@ -102,15 +127,13 @@ ipcMain.handle('get-system-info', () => {
   const now = Date.now();
   const cpuCores = os.cpus().length;
 
-  // Calculate CPU percentage over interval
   let cpuPercent = 0;
   if (_lastCpuUsage && _lastCpuTime) {
-    const elapsed = now - _lastCpuTime; // ms
+    const elapsed = now - _lastCpuTime;
     if (elapsed > 0) {
       const userDelta = cpuUsage.user - _lastCpuUsage.user;
       const sysDelta = cpuUsage.system - _lastCpuUsage.system;
-      const totalDelta = userDelta + sysDelta; // microseconds
-      // Convert to percentage: (microseconds used) / (elapsed ms * 1000 * cores)
+      const totalDelta = userDelta + sysDelta;
       cpuPercent = Math.min(100, (totalDelta / (elapsed * 1000 * cpuCores)) * 100);
     }
   }
@@ -133,7 +156,49 @@ ipcMain.handle('get-system-info', () => {
   };
 });
 
-// Log message from renderer
+// ── SSI Runtime IPC ──
+
+// Initialize the SSI runtime
+ipcMain.handle('runtime-init', async () => {
+  const result = await runtimeBridge.initRuntime();
+  if (result.ok) {
+    console.log('[SSI Runtime] Initialized successfully');
+  } else {
+    console.error('[SSI Runtime] Init failed:', result.error);
+  }
+  return result;
+});
+
+// Get runtime status
+ipcMain.handle('runtime-status', () => {
+  return runtimeBridge.getRuntimeStatus();
+});
+
+// Get registered components
+ipcMain.handle('runtime-components', () => {
+  return runtimeBridge.getComponents();
+});
+
+// Stop the runtime
+ipcMain.handle('runtime-stop', async () => {
+  const result = await runtimeBridge.stopRuntime();
+  return result;
+});
+
+// Load a .swbn component
+ipcMain.handle('runtime-load-component', async () => {
+  const result = await runtimeBridge.openSwbnDialog();
+  return result;
+});
+
+// Load a .swbn by path
+ipcMain.handle('runtime-load-swbn', async (_event, swbnPath) => {
+  const result = await runtimeBridge.loadSwbnFile(swbnPath);
+  return result;
+});
+
+// ── Log IPC ──
+
 ipcMain.handle('log', (_event, level, message, data) => {
   const timestamp = new Date().toISOString();
   const logLine = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
@@ -145,12 +210,10 @@ ipcMain.handle('log', (_event, level, message, data) => {
   return { written: true, file: logFile };
 });
 
-// Export logs
 ipcMain.handle('export-logs', async () => {
   return exportLogs();
 });
 
-// Get log files list
 ipcMain.handle('get-log-files', () => {
   try {
     const files = fs.readdirSync(LOG_DIR)
@@ -168,7 +231,6 @@ ipcMain.handle('get-log-files', () => {
   }
 });
 
-// Read log file content
 ipcMain.handle('read-log-file', (_event, filePath) => {
   try {
     const fullPath = path.join(LOG_DIR, path.basename(filePath));
@@ -243,7 +305,6 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-// Minimize to tray instead of closing when tray is active
 app.on('before-quit', () => {
   // Allow normal quit
 });

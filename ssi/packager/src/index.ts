@@ -87,7 +87,7 @@ export class SwbnPackager {
   /** Create a .swbn archive from source files */
   static async build(sourceDir: string, outputPath: string, manifest?: Partial<SwbnManifest>): Promise<void> {
     // Generate manifest if not provided
-    const mf: SwbnManifest = manifest || SwbnPackager.generateManifest(sourceDir);
+    const mf: SwbnManifest = (manifest || SwbnPackager.generateManifest(sourceDir)) as SwbnManifest;
 
     // Collect files
     const files: Array<{ name: string; data: Buffer }> = [];

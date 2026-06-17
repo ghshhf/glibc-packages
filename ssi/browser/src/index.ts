@@ -319,7 +319,14 @@ export class BrowserEngine extends SsiBaseComponent {
       }
     }
 
-    this.displayInfo = config.display || this.displayInfo;
+    if (config.display && typeof config.display === 'object') {
+      const d = config.display as Record<string, unknown>;
+      if (typeof d.width === 'number') this.displayInfo.width = d.width;
+      if (typeof d.height === 'number') this.displayInfo.height = d.height;
+      if (typeof d.dpi === 'number') this.displayInfo.dpi = d.dpi;
+      if (typeof d.refreshRate === 'number') this.displayInfo.refreshRate = d.refreshRate;
+      if (typeof d.colorDepth === 'number') this.displayInfo.colorDepth = d.colorDepth;
+    }
   }
 
   protected async onStart(): Promise<void> {

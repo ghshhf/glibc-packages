@@ -203,7 +203,7 @@ export function errorLabel(code: SsiErrorCode): string {
     case SsiErrorCode.INVALID: return 'Invalid Argument';
     case SsiErrorCode.NOT_SUPPORTED: return 'Not Supported';
     case SsiErrorCode.MEMORY: return 'Out of Memory';
-    default: return `Unknown (0x${code.toString(16)})`;
+    default: return `Unknown (0x${ (code as number).toString(16) })`;
   }
 }
 
@@ -213,7 +213,7 @@ export function encodeSsiBuffer(data: string | ArrayBuffer | Uint8Array): SsiBuf
     return { size: encoded.byteLength, data: encoded.buffer };
   }
   if (data instanceof Uint8Array) {
-    return { size: data.byteLength, data: data.buffer };
+    return { size: data.byteLength, data: data.buffer as ArrayBuffer };
   }
   return { size: data.byteLength, data };
 }

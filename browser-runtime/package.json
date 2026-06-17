@@ -34,8 +34,8 @@
   "dependencies": {
     "ws": "^8.0.0"
   },
-  "peerDependencies": {},
   "devDependencies": {
+    "@types/node": "^25.9.3",
     "typescript": "^5.0.0"
   },
   "exports": {

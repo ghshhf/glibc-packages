@@ -1,0 +1,12 @@
+{
+  "name": "@skynet/ssi-db",
+  "version": "1.0.0",
+  "description": "SkyNet SSI-DB: Storage Engine — KV store, P2P content-addressed storage, storage proofs",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@skynet/ssi-core": "1.0.0"
+  },
+  "keywords": ["ssi", "storage", "kv-store", "p2p", "skynet"],
+  "license": "MIT"
+}

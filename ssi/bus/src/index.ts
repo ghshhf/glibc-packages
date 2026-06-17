@@ -198,6 +198,7 @@ export class SsiServiceBus extends SsiBaseComponent {
     const target = this.registry.findByUuid(msg.targetUuid);
     if (!target) {
       this.stats.routingErrors++;
+      this.stats.messagesDropped++;
       this.log(`Target not found: ${msg.targetUuid}`, 'warn');
       return SsiErrorCode.NOT_FOUND;
     }
