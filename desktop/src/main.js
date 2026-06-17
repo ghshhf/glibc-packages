@@ -1,21 +1,21 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 let mainWindow;
+let LOG_DIR;
 
 // ── App Config ──
 const APP_NAME = 'SkyNet SSI Runtime';
 const APP_VERSION = '1.0.0';
-const LOG_DIR = path.join(app.getPath('userData'), 'logs');
-
-// ── Ensure log directory ──
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-}
 
 // ── Create main window ──
 function createWindow() {
+  // Ensure log directory (safe: called after app is ready)
+  LOG_DIR = path.join(app.getPath('userData'), 'logs');
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+  }
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
