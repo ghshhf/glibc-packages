@@ -7,6 +7,7 @@
 #   ./build-all.sh [包目录1 包目录2 ...]
 #   ./build-all.sh --list packages.txt                 # 从文件读取
 #   ./build-all.sh --platform linux --clean gpkg/zlib  # 只构建某个平台
+#   ./build-all.sh --platform wasm gpkg/zlib           # 构建 WASM/浏览器目标
 #
 # 默认行为:
 #   自动检测当前系统，为所有可用的平台构建包:
@@ -14,6 +15,7 @@
 #     • Windows: 在 MSYS2 shell 内使用 MinGW-w64 本机工具链
 #     • macOS: 本机 clang
 #     • FreeBSD: 本机 gcc/clang
+#     • WASM: 如果检测到 Emscripten SDK (emcc)，自动添加 WASM/浏览器构建
 #
 # 如果不指定包目录，默认构建以下 "里程碑" 包:
 #   gpkg/zlib gpkg/ncurses gpkg/neofetch gpkg/libxml2
@@ -103,6 +105,16 @@ if (( ${#PLATFORMS[@]} > 0 )); then
                 echo "  注意: Android 平台建议使用 build-android.sh 配合完整 NDK/CGCT"
                 BUILD_JOBS+=("android:aarch64:cgct-android")
                 ;;
+            wasm|browser)
+                if command -v emcc &>/dev/null || [[ -n "${EMSDK:-}" ]]; then
+                    BUILD_JOBS+=("browser:wasm32:emscripten")
+                    echo "  WASM: Emscripten 已就绪"
+                else
+                    echo "  注意: WASM 平台需要 Emscripten SDK，跳过"
+                    echo "         安装: git clone https://github.com/emscripten-core/emsdk.git"
+                    echo "               cd emsdk && ./emsdk install latest && source ./emsdk_env.sh"
+                fi
+                ;;
         esac
     done
 else
@@ -119,15 +131,28 @@ else
             if command -v i686-linux-gnu-gcc >/dev/null 2>&1; then
                 BUILD_JOBS+=("linux:i686:gcc-native")
             fi
+            # WASM
+            if command -v emcc &>/dev/null || [[ -n "${EMSDK:-}" ]]; then
+                BUILD_JOBS+=("browser:wasm32:emscripten")
+                echo "  WASM: Emscripten 已就绪"
+            fi
             ;;
         Darwin*)
             BUILD_JOBS+=("darwin:${HOST_ARCH/aarch64/aarch64}:clang-native")
+            # WASM
+            if command -v emcc &>/dev/null || [[ -n "${EMSDK:-}" ]]; then
+                BUILD_JOBS+=("browser:wasm32:emscripten")
+            fi
             ;;
         FreeBSD|NetBSD|OpenBSD)
             BUILD_JOBS+=("bsd:x86_64:gcc-native")
             ;;
         CYGWIN*|MSYS*|MINGW*)
             BUILD_JOBS+=("windows:x86_64:msys2-mingw")
+            # WASM
+            if command -v emcc &>/dev/null || [[ -n "${EMSDK:-}" ]]; then
+                BUILD_JOBS+=("browser:wasm32:emscripten")
+            fi
             ;;
         *)
             echo "警告: 未知操作系统 ${HOST_OS}，按 Linux 处理" >&2

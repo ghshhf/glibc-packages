@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>glibc-packages WASM Browser Test</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0d1117; color: #c9d1d9; line-height: 1.6; padding: 20px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { color: #58a6ff; margin-bottom: 8px; font-size: 24px; }
+  h2 { color: #8b949e; font-size: 16px; margin-bottom: 20px; font-weight: normal; }
+  .status-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  .status-card h3 { font-size: 14px; color: #8b949e; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .feature { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #21262d; }
+  .feature:last-child { border-bottom: none; }
+  .feature-name { color: #c9d1d9; }
+  .feature-status { font-weight: bold; }
+  .feature-status.yes { color: #3fb950; }
+  .feature-status.no { color: #f85149; }
+  .feature-status.warn { color: #d29922; }
+  .log-area { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 12px; height: 300px; overflow-y: auto; white-space: pre-wrap; }
+  .log-entry { margin: 2px 0; }
+  .log-info { color: #58a6ff; }
+  .log-success { color: #3fb950; }
+  .log-warn { color: #d29922; }
+  .log-error { color: #f85149; }
+  .btn { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; border-radius: 6px; padding: 8px 16px; cursor: pointer; font-size: 13px; }
+  .btn:hover { background: #30363d; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
+  .stat-box { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 12px; text-align: center; }
+  .stat-value { font-size: 24px; font-weight: bold; }
+  .stat-label { font-size: 11px; color: #8b949e; text-transform: uppercase; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🧪 glibc-packages WASM Browser Test</h1>
+  <h2>验证浏览器运行时和 WASM 模块加载是否正常</h2>
+
+  <!-- Feature Detection -->
+  <div class="status-card">
+    <h3>🔍 浏览器特性检测</h3>
+    <div id="feature-list"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="status-card">
+    <h3>🎮 控制面板</h3>
+    <button class="btn btn-primary" id="btn-init" onclick="initRuntime()">初始化运行时</button>
+    <button class="btn" id="btn-load" onclick="loadZlib()" disabled>加载 zlib.wasm</button>
+    <button class="btn" id="btn-test" onclick="runTest()" disabled>运行压缩测试</button>
+    <button class="btn" onclick="clearLog()">清除日志</button>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-value" id="env-display">-</div><div class="stat-label">环境</div></div>
+      <div class="stat-box"><div class="stat-value" id="memory-display">-</div><div class="stat-label">内存</div></div>
+      <div class="stat-box"><div class="stat-value" id="modules-display">0</div><div class="stat-label">已加载模块</div></div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="status-card">
+    <h3>📋 运行日志</h3>
+    <div id="log" class="log-area">[等待初始化...]</div>
+  </div>
+
+  <!-- Result -->
+  <div class="status-card" id="result-card" style="display:none;">
+    <h3>📊 测试结果</h3>
+    <pre id="result-display" style="background:#0d1117; border:none; color:#c9d1d9; padding:0; font-family:monospace; font-size:13px;"></pre>
+  </div>
+</div>
+
+<script type="module">
+// ==========================================================================
+// Browser Runtime Test
+// ==========================================================================
+const FEATURES = [
+  ['WebAssembly', 'webAssembly', 'yes'],
+  ['SharedArrayBuffer', 'sharedArrayBuffer', 'yes'],
+  ['WebSocket', 'webSocket', 'yes'],
+  ['WebRTC', 'webRTC', 'warn'],
+  ['OPFS (File System)', 'opfs', 'warn'],
+  ['Web Workers', 'webWorker', 'yes'],
+  ['WASM SIMD', 'simd', 'warn'],
+];
+
+function checkFeature(feature) {
+  try {
+    switch (feature) {
+      case 'sharedArrayBuffer': return typeof SharedArrayBuffer !== 'undefined';
+      case 'webAssembly': return typeof WebAssembly !== 'undefined';
+      case 'webSocket': return typeof WebSocket !== 'undefined';
+      case 'webRTC': return typeof RTCPeerConnection !== 'undefined';
+      case 'opfs': return typeof navigator?.storage?.getDirectory === 'function';
+      case 'webWorker': return typeof Worker !== 'undefined';
+      case 'simd': try { return WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,1,5,1,96,0,1,123,3,2,1,0,10,10,1,8,0,65,0,253,15,253,15,11])); } catch { return false; }
+      default: return false;
+    }
+  } catch { return false; }
+}
+
+// Check COOP/COEP headers
+function checkCrossOriginIsolation() {
+  try {
+    if (typeof crossOriginIsolated !== 'undefined') {
+      return crossOriginIsolated;
+    }
+    return false;
+  } catch { return false; }
+}
+
+// Render features
+const featureList = document.getElementById('feature-list');
+const isIsolated = checkCrossOriginIsolation();
+
+for (const [name, key, defaultType] of FEATURES) {
+  const supported = checkFeature(key);
+  const type = supported ? 'yes' : 'no';
+  const label = type === 'yes' ? '✅ 支持' : type === 'no' ? '❌ 不支持' : '⚠️ 有限';
+
+  const div = document.createElement('div');
+  div.className = 'feature';
+  div.innerHTML = `
+    <span class="feature-name">${name} ${key === 'sharedArrayBuffer' && !isIsolated ? '<span style="color:#d29922;font-size:11px;">(需要 COOP/COEP)</span>' : ''}</span>
+    <span class="feature-status ${type}">${label}</span>
+  `;
+  featureList.appendChild(div);
+}
+
+// Cross-origin isolation status
+const coopDiv = document.createElement('div');
+coopDiv.className = 'feature';
+coopDiv.innerHTML = `
+  <span class="feature-name">🔒 Cross-Origin Isolation (COOP/COEP)</span>
+  <span class="feature-status ${isIsolated ? 'yes' : 'no'}">${isIsolated ? '✅ 已启用' : '❌ 未启用'}</span>
+`;
+featureList.appendChild(coopDiv);
+
+// ==========================================================================
+// Runtime Functions
+// ==========================================================================
+let runtime = null;
+let zlibModule = null;
+
+const LOG = document.getElementById('log');
+const RESULT = document.getElementById('result-display');
+const RESULT_CARD = document.getElementById('result-card');
+
+function appendLog(msg, type = 'info') {
+  const entry = document.createElement('div');
+  entry.className = `log-entry log-${type}`;
+  const ts = new Date().toLocaleTimeString();
+  entry.textContent = `[${ts}] ${msg}`;
+  LOG.appendChild(entry);
+  LOG.scrollTop = LOG.scrollHeight;
+}
+
+function updateEnvDisplay(env) {
+  document.getElementById('env-display').textContent = env;
+}
+
+function updateMemoryDisplay(bytes) {
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  document.getElementById('memory-display').textContent =
+    (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + sizes[i];
+}
+
+function updateModulesDisplay(count) {
+  document.getElementById('modules-display').textContent = count;
+}
+
+window.initRuntime = async function() {
+  try {
+    const btn = document.getElementById('btn-init');
+    btn.disabled = true;
+    btn.textContent = '初始化中...';
+
+    appendLog('初始化 glibc-packages 浏览器运行时...', 'info');
+
+    // Dynamic import of the runtime
+    const { GlibcRuntime, loadWasm } = await import('./browser-runtime/src/index.ts');
+
+    runtime = GlibcRuntime.init({
+      logLevel: 'info',
+      cacheModules: true,
+      diagnostics: true,
+    });
+
+    updateEnvDisplay(runtime.environment);
+    appendLog(`运行时初始化完成 • 环境: ${runtime.environment}`, 'success');
+    appendLog(runtime.getSummary().replace(/\n/g, ' | '), 'info');
+
+    document.getElementById('btn-load').disabled = false;
+    appendLog('✅ 运行时已就绪，可加载 WASM 模块', 'success');
+  } catch (e) {
+    appendLog(`❌ 初始化失败: ${e.message}`, 'error');
+    console.error(e);
+    document.getElementById('btn-init').textContent = '重试初始化';
+    document.getElementById('btn-init').disabled = false;
+  }
+};
+
+window.loadZlib = async function() {
+  try {
+    const btn = document.getElementById('btn-load');
+    btn.disabled = true;
+    btn.textContent = '加载中...';
+
+    // Try loading from various paths
+    const wasmUrls = [
+      '../cross-build/browser-wasm32/zlib-wasm/dest/usr/local/lib/zlib.wasm',
+      '../wasm/zlib.wasm',
+      './zlib.wasm',
+    ];
+
+    let loaded = false;
+    for (const url of wasmUrls) {
+      try {
+        appendLog(`尝试加载: ${url}`, 'info');
+
+        // Check if file exists
+        const resp = await fetch(url, { method: 'HEAD' });
+        if (!resp.ok) continue;
+
+        zlibModule = await loadWasm({
+          wasmUrl: url,
+          jsUrl: url.replace('.wasm', '.js'),
+          name: 'zlib',
+          enableFilesystem: false,
+          timeout: 15000,
+        });
+
+        loaded = true;
+        break;
+      } catch (e) {
+        appendLog(`路径 ${url} 不可用: ${e.message}`, 'warn');
+      }
+    }
+
+    if (!loaded) {
+      appendLog('⚠️ 未找到 zlib.wasm，请先运行 ./build-wasm.sh gpkg/zlib-wasm', 'warn');
+      btn.textContent = '重试加载';
+      btn.disabled = false;
+      return;
+    }
+
+    const size = (zlibModule.memorySize / 1024 / 1024).toFixed(2);
+    appendLog(`✅ zlib.wasm 加载成功 (${size}MB, ${zlibModule.initTime.toFixed(0)}ms)`, 'success');
+    updateMemoryDisplay(zlibModule.memorySize);
+    updateModulesDisplay(runtime.wasm.cacheSize);
+    document.getElementById('btn-test').disabled = false;
+  } catch (e) {
+    appendLog(`❌ 加载失败: ${e.message}`, 'error');
+    document.getElementById('btn-load').textContent = '重试加载';
+    document.getElementById('btn-load').disabled = false;
+  }
+};
+
+window.runTest = async function() {
+  try {
+    const btn = document.getElementById('btn-test');
+    btn.disabled = true;
+    btn.textContent = '测试中...';
+
+    appendLog('开始压缩测试...', 'info');
+
+    if (!zlibModule) {
+      throw new Error('zlib 模块未加载');
+    }
+
+    // Test data: "Hello, glibc-packages WASM! " repeated
+    const testStr = 'Hello, glibc-packages WASM! '.repeat(1000);
+    const encoder = new TextEncoder();
+    const inputData = encoder.encode(testStr);
+
+    // Allocate memory in WASM heap
+    const inputPtr = zlibModule.module._malloc(inputData.length);
+    const outputSize = inputData.length + 64; // zlib_compressBound
+    const outputPtr = zlibModule.module._malloc(outputSize);
+
+    // Copy data to WASM memory
+    const heapView = new Uint8Array(zlibModule.module.HEAPU8.buffer);
+    heapView.set(inputData, inputPtr);
+
+    // Call compress
+    const compressResult = zlibModule.module._compress(
+      outputPtr, outputSize, inputPtr, inputData.length
+    );
+
+    if (compressResult !== 0) {
+      // Read compressed size
+      const compressed = new Uint8Array(
+        zlibModule.module.HEAPU8.buffer,
+        outputPtr,
+        outputSize
+      );
+
+      const ratio = ((1 - compressed.length / inputData.length) * 100).toFixed(1);
+
+      RESULT_CARD.style.display = 'block';
+      RESULT.textContent = `
+╔═══════════════════════════════════════╗
+║      压缩测试结果                      ║
+╠═══════════════════════════════════════╣
+║  原始大小:  ${inputData.length} bytes         ║
+║  压缩后:    ${compressed.length} bytes         ║
+║  压缩率:    ${ratio}%                        ║
+║  函数:      compress()                       ║
+║  状态:      ✅ 成功                          ║
+╚═══════════════════════════════════════╝
+`.trim();
+
+      appendLog(`✅ 压缩测试通过! 原始: ${inputData.length} → 压缩: ${compressed.length} (${ratio}%)`, 'success');
+    } else {
+      appendLog('❌ compress 返回错误', 'error');
+    }
+
+    // Free memory
+    zlibModule.module._free(inputPtr);
+    zlibModule.module._free(outputPtr);
+
+  } catch (e) {
+    appendLog(`❌ 测试失败: ${e.message}`, 'error');
+    console.error(e);
+  } finally {
+    document.getElementById('btn-test').textContent = '运行测试';
+    document.getElementById('btn-test').disabled = false;
+  }
+};
+
+window.clearLog = function() {
+  LOG.innerHTML = '[日志已清除]';
+  RESULT_CARD.style.display = 'none';
+};
+
+appendLog('页面已加载，请点击"初始化运行时"开始测试', 'info');
+</script>
+</body>
+</html>

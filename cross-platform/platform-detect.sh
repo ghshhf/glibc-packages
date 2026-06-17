@@ -16,9 +16,11 @@
 #   windows   - Windows (MSYS2/MinGW)
 #   darwin    - macOS
 #   bsd       - FreeBSD / NetBSD / OpenBSD
+#   browser   - 浏览器 / WebAssembly (Emscripten)
+#   wasm      - browser 的别名
 #
 # 输出变量:
-#   CROSS_PLATFORM         - 平台名称 (android|linux|windows|darwin|bsd)
+#   CROSS_PLATFORM         - 平台名称 (android|linux|windows|darwin|bsd|browser)
 #   CROSS_ARCH             - 架构名称 (x86_64|aarch64|i686|arm|armv7a)
 #   CROSS_PREFIX           - 安装前缀
 #   CROSS_SCRIPTDIR        - 框架脚本目录
@@ -111,6 +113,9 @@ _normalize_arch() {
         armv7a|armv7l|arm)
             echo "arm"
             ;;
+        wasm32|wasm64|wasm)
+            echo "wasm32"
+            ;;
         *)
             echo "x86_64"  # 默认回退
             ;;
@@ -152,6 +157,7 @@ if [[ -z "${CROSS_PREFIX:-}" ]]; then
             windows) export CROSS_PREFIX="/mingw64" ;;
             darwin)  export CROSS_PREFIX="/usr/local" ;;
             bsd)     export CROSS_PREFIX="/usr/local" ;;
+            browser|wasm) export CROSS_PREFIX="/usr/local" ;;
         esac
     fi
 fi

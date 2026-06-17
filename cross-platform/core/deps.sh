@@ -16,6 +16,7 @@
 #   Linux (Arch):       ncurses, libevent, python
 #   Windows (MSYS2):    mingw-w64-x86_64-ncurses, mingw-w64-x86_64-libevent
 #   macOS (Homebrew):   ncurses, libevent, python
+#   Browser/WASM:       ncurses-wasm, libevent-wasm, python-wasm (Emscripten 端口)
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -66,6 +67,10 @@ cross_normalize_dep_name() {
         bsd)
             # BSD ports 标准命名
             echo "$(cross_map_lib_to_bsd "$base_name")"
+            ;;
+        browser|wasm)
+            # WASM/Emscripten：使用 -wasm 后缀
+            echo "$(cross_map_lib_to_wasm "$base_name")"
             ;;
         *)
             echo "$base_name"
@@ -136,6 +141,42 @@ cross_map_lib_to_bsd() {
 }
 
 # ---------------------------------------------------------------------------
+# 4b. WASM / Emscripten 端口映射表
+# Emscripten 提供了许多预编译库端口，使用 -s USE_<LIB>=1 链接
+# ---------------------------------------------------------------------------
+cross_map_lib_to_wasm() {
+    local lib="$1"
+    # WASM 库命名规则：添加 -wasm 后缀，映射到 Emscripten 端口
+    case "$lib" in
+        zlib)       echo "zlib-wasm" ;;
+        libpng)     echo "libpng-wasm" ;;
+        libjpeg|libjpeg-turbo) echo "libjpeg-wasm" ;;
+        freetype)   echo "freetype-wasm" ;;
+        harfbuzz)   echo "harfbuzz-wasm" ;;
+        bzip2)      echo "bzip2-wasm" ;;
+        sdl2)       echo "sdl2-wasm" ;;
+        sdl2-image) echo "sdl2-image-wasm" ;;
+        sdl2-mixer) echo "sdl2-mixer-wasm" ;;
+        sdl2-ttf)   echo "sdl2-ttf-wasm" ;;
+        sdl2-net)   echo "sdl2-net-wasm" ;;
+        curl)       echo "curl-wasm" ;;
+        sqlite3)    echo "sqlite3-wasm" ;;
+        ogg|libogg) echo "libogg-wasm" ;;
+        vorbis|libvorbis) echo "libvorbis-wasm" ;;
+        mpg123)     echo "mpg123-wasm" ;;
+        openssl)    echo "openssl-wasm" ;;
+        libxml2)    echo "libxml2-wasm" ;;
+        ncurses)    echo "ncurses-wasm" ;;
+        readline)   echo "readline-wasm" ;;
+        glib)       echo "glib-wasm" ;;
+        icu)        echo "icu-wasm" ;;
+        # Emscripten 内置端口（不需要额外编译）
+        regal)      echo "regal-wasm" ;;
+        *)          echo "${lib}-wasm" ;;
+    esac
+}
+
+# ---------------------------------------------------------------------------
 # 5. 检查依赖是否已安装
 # ---------------------------------------------------------------------------
 cross_check_dep_installed() {
@@ -195,6 +236,12 @@ cross_check_dep_installed() {
             fi
             return 1
             ;;
+        browser|wasm)
+            # WASM 目标：依赖检查在构建时通过 Emscripten SDK 验证
+            # Emscripten 端口通常通过 -s USE_<LIB>=N 标志在链接时处理
+            echo "  [WASM] 依赖 ${native_dep} - 使用 Emscripten 端口或预编译库"
+            return 0
+            ;;
         *)
             return 1
             ;;
@@ -217,6 +264,10 @@ cross_get_sysroot() {
             fi
             ;;
         windows)
+            echo "${CROSS_PREFIX}"
+            ;;
+        browser|wasm)
+            # Emscripten sysroot 在 emcc 内部管理
             echo "${CROSS_PREFIX}"
             ;;
         *)

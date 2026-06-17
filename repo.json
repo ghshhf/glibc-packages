@@ -1,20 +1,81 @@
 {
   "repo": "glibc-packages",
   "owner": "ghshhf",
-  "description": "Cross-platform package build system with public API access",
+  "description": "AI-TP OS System Standard — fully standardized cross-platform component system with deep browser integration",
   "homepage": "https://github.com/ghshhf/glibc-packages",
-  "pkg_format": "pacman",
-  "gpkg": {
-    "name": "gpkg",
-    "distribution": "gpkg",
-    "component": "gpkg",
-    "url": "https://raw.githubusercontent.com/ghshhf/glibc-packages/master/gpkg"
+  "pkg_format": "swbn",
+  "system_standards": {
+    "architecture": "SYSTEM-STANDARD.md",
+    "interface_spec": "SPEC-INTERFACE.md",
+    "version": "1.0.0",
+    "specs": [
+      {"name": "Component Model", "path": "specs/component-model.md"},
+      {"name": "IPC Protocol", "path": "specs/ipc.md"},
+      {"name": "WASM Runtime", "path": "specs/wasm-runtime.md"},
+      {"name": "Security Model", "path": "specs/security.md"}
+    ]
+  },
+  "platforms": {
+    "native": {
+      "description": "Native system builds (Linux, macOS, Windows, Android, BSD)",
+      "architectures": ["x86_64", "aarch64", "i686", "arm"],
+      "toolchains": ["gcc-native", "clang-native", "msys2-mingw", "mingw-cross", "cgct-android"]
+    },
+    "ssi_unified": {
+      "description": "SSI Standardized Runtime — all platforms run the same component model",
+      "modes": [
+        {
+          "name": "Browser Mode",
+          "runtime": "V8 + Emscripten",
+          "targets": ["Web browsers", "PWAs", "WebViews"]
+        },
+        {
+          "name": "Native Mode",
+          "runtime": "WAMR / WASM3 + glibc",
+          "targets": ["Linux servers", "Desktop", "Android"]
+        },
+        {
+          "name": "Embedded Mode",
+          "runtime": "WASM3 micro runtime",
+          "targets": ["IoT devices", "Routers", "MCUs"]
+        }
+      ],
+      "interface": "SSI (System Standard Interface) v1.0",
+      "package_format": ".swbn (Standard WASM Binary Notation)"
+    }
+  },
+  "swbn_packages": {
+    "description": "Standard WASM Binary Notation packages — all system components",
+    "format": ".swbn (tar.gz with manifest.json + main.wasm + signature.sig)",
+    "build_command": "build-cross.sh --platform browser --toolchain emscripten",
+    "package_command": "swbn build"
   },
   "scripts": {
     "validate_format": "scripts/validate/format.py",
     "validate_links": "scripts/validate/links.py",
     "build_cross": "build-cross.sh",
     "build_package": "build-package.sh",
-    "install_deps": "install-deps.sh"
+    "install_deps": "install-deps.sh",
+    "build_wasm": "build-wasm.sh",
+    "build_swbn": "build-cross.sh --platform browser --toolchain emscripten --output-format swbn"
+  },
+  "core_components": [
+    {"name": "browser-engine",   "type": "browser",  "interface": "SSI-BR", "status": "design"},
+    {"name": "window-manager",   "type": "ui",       "interface": "SSI-UI", "status": "design"},
+    {"name": "storage-engine",   "type": "storage",  "interface": "SSI-DB", "status": "design"},
+    {"name": "compute-engine",   "type": "compute",  "interface": "SSI-AI", "status": "design"},
+    {"name": "network-stack",    "type": "network",  "interface": "SSI-NET","status": "design"},
+    {"name": "wasm-runtime",     "type": "runtime",  "interface": "SSI-KRN","status": "design"},
+    {"name": "security-module",  "type": "security", "interface": "SSI-SEC","status": "design"},
+    {"name": "file-system",      "type": "fs",       "interface": "SSI-FS", "status": "design"},
+    {"name": "device-manager",   "type": "hal",      "interface": "SSI-HAL","status": "design"}
+  ],
+  "runtimes": {
+    "ssi_krn": {
+      "name": "SSI-KRN WASM Runtime",
+      "path": "browser-runtime/",
+      "language": "TypeScript (npm package)",
+      "description": "SSI Kernel Runtime — loads and runs .swbn components, implements SSI-CORE interface"
+    }
   }
 }

@@ -1,0 +1,33 @@
+# glibc-packages WebAssembly (WASM) — 可编译到浏览器的包列表
+# 以 # 开头的行为注释，会被 build-wasm.sh --list 忽略
+#
+# 使用:
+#   ./build-wasm.sh --list wasm-packages.list
+#   ./build-wasm.sh --clean --jobs 8 --list wasm-packages.list
+
+# ========== 核心运行时 ==========
+# WASM runtime bootstrap (元包，仅生成配置文件)
+gpkg/wasm-runtime
+
+# ========== 压缩库 ==========
+gpkg/zlib-wasm
+
+# ========== 计划中 ==========
+# gpkg/bzip2-wasm     # bzip2 压缩 (Emscripten 端口 -s USE_BZIP2=1)
+# gpkg/libpng-wasm    # PNG 图片处理 (需 zlib)
+# gpkg/libjpeg-wasm   # JPEG 图片处理
+# gpkg/freetype-wasm  # 字体渲染
+# gpkg/harfbuzz-wasm  # 文字塑形
+
+# ========== 网络库 ==========
+# gpkg/curl-wasm      # HTTP 请求 (Emscripten 端口 -s USE_CURL=1)
+# gpkg/openssl-wasm   # 加密库
+
+# ========== 数据库 ==========
+# gpkg/sqlite3-wasm   # SQLite (Emscripten 端口 -s USE_SQLITE3=1)
+
+# ========== 媒体 ==========
+# gpkg/sdl2-wasm      # SDL2 图形库 (Emscripten 端口 -s USE_SDL=2)
+# gpkg/libogg-wasm    # Ogg 音频
+# gpkg/libvorbis-wasm # Vorbis 音频
+# gpkg/mpg123-wasm    # MP3 解码

@@ -1,7 +1,8 @@
 # AI-TP OS 架构文档
 
 > **AI-Native Decentralized Operating System**  
-> 一个面向所有设备的底层系统：网络层、存储层、计算层三位一体
+> 一个面向所有设备的底层系统：网络层、存储层、计算层三位一体  
+> **标准化架构 🌐 SSI v1.0 — 参见 [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md)**
 
 ---
 
@@ -9,11 +10,15 @@
 
 1. [设计哲学](#设计哲学)
 2. [系统架构](#系统架构)
-3. [网络层设计](#网络层设计)
-4. [存储层设计](#存储层设计)
-5. [计算层设计](#计算层设计)
-6. [三层交互](#三层交互)
-7. [开发路线图](#开发路线图)
+3. [系统标准架构 (SSI)](#系统标准架构-ssi)
+4. [浏览器深度集成](#浏览器深度集成)
+5. [网络层设计](#网络层设计)
+6. [存储层设计](#存储层设计)
+7. [计算层设计](#计算层设计)
+8. [三层交互](#三层交互)
+9. [组件生命周期](#组件生命周期)
+10. [安全模型](#安全模型)
+11. [开发路线图](#开发路线图)
 
 ---
 
@@ -81,6 +86,99 @@
 | **网络层** | Network Manager | 节点发现、NAT 穿透、去中心化寻址、P2P 通信 | TCP/IP 协议栈 + DNS |
 | **存储层** | Storage Manager | 统一存储 API、本地/P2P 存储、存储证明 | 文件系统 + 云存储 |
 | **计算层** | Compute Manager | AI 任务调度、模型分发、隐私计算、激励机制 | 操作系统调度器 + GPU 驱动 |
+
+---
+
+## 🏗️ 系统标准架构 (SSI)
+
+> AI-TP OS 不是一堆工具的拼凑——它是一个**完全标准化的底层系统**。  
+> 所有组件遵循同一套接口规范。浏览器不是移植目标，而是系统的原生核心。  
+> **详细规范参见**: [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md) | [SPEC-INTERFACE.md](SPEC-INTERFACE.md)
+
+### 标准化层级
+
+```
+┌─────────────────────────────────────────────────────────┐
+│   L5: 应用层 (Application)                                │
+│   WASM 应用 / 系统工具 / 第三方组件 (.swbn 格式)          │
+│   接口: SSI-API                                          │
+├─────────────────────────────────────────────────────────┤
+│   L4: 系统服务层 (System Services)                        │
+│   浏览器引擎 / 窗口系统 / 存储引擎 / 计算引擎 / 网络协议栈 │
+│   接口: SSI-SVC (SSI-BR, SSI-UI, SSI-DB, SSI-AI, SSI-NET)│
+├─────────────────────────────────────────────────────────┤
+│   L3: 内核层 (Kernel)                                    │
+│   WASM 运行时 / SSI 总线 / 组件管理器 / 安全模块          │
+│   接口: SSI-KRN, SSI-SEC                                 │
+├─────────────────────────────────────────────────────────┤
+│   L2: 硬件抽象层 (HAL)                                   │
+│   设备信息 / 传感器 / GPU / 网络状态 / 电池               │
+│   接口: SSI-HAL                                          │
+├─────────────────────────────────────────────────────────┤
+│   L1: 物理层 (Physical)                                  │
+│   手机 / 电脑 / 浏览器沙箱 / 服务器 / IoT / 路由器       │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 设计原则
+
+| # | 原则 | 含义 |
+|---|------|------|
+| 1 | **统一标准化** | 每一层、每一个组件遵循同一套 SSI 接口规范，无例外 |
+| 2 | **浏览器即内核** | 浏览器引擎是系统的原生渲染与脚本执行引擎，不是用户空间应用 |
+| 3 | **全平台同构** | 同一套标准化架构在 Browser / Native / Embedded 模式一致运行 |
+| 4 | **组件即 WASM** | 所有应用和系统服务都是 `.swbn` 格式的 WASM 组件 |
+| 5 | **接口即契约** | SSI 接口是硬边界——L5 不能直接调用 L3 |
+
+### 组件模型
+
+```
+my-component-1.0.0.swbn
+├── manifest.json          # 组件清单（声明接口、权限、依赖）
+├── main.wasm              # WASM 模块（实现 SSI 接口）
+├── main.js                # Emscripten JS 胶水（可选）
+├── types/                 # 类型定义
+├── assets/                # 资源文件
+└── signature.sig          # 数字签名
+```
+
+所有组件通过 **SSI 标准服务总线**通信——统一的消息格式、路由、安全策略。
+
+---
+
+## 🌐 浏览器深度集成
+
+浏览器引擎 (`browser-engine`) 是系统的 **L4 核心服务**，提供渲染、脚本执行、GPU 计算三大能力。
+
+### 浏览器作为系统组件
+
+```
+ AI-TP 系统层
+┌────────────────────────────────────────────────────┐
+│  SSI 标准服务总线                                    │
+│                                                     │
+│  ┌─────────────────────┐  ┌──────────────────────┐ │
+│  │  browser-engine     │  │  其他系统组件          │ │
+│  │  (SSI-BR 接口)      │  │  (SSI-XX 接口)        │ │
+│  │                     │  │                       │ │
+│  │  • render()         │  │  • SSI-UI 窗口系统    │ │
+│  │  • execute_script() │  │  • SSI-NET 网络协议栈 │ │
+│  │  • compute_shader() │  │  • SSI-DB 存储引擎    │ │
+│  │  • fetch()          │  │  • SSI-AI 计算引擎    │ │
+│  │  • create_sandbox() │  │  • SSI-FS 文件系统    │ │
+│  └─────────────────────┘  └──────────────────────┘ │
+└────────────────────────────────────────────────────┘
+```
+
+### 三模渲染
+
+| 模式 | 技术栈 | 场景 |
+|------|--------|------|
+| **全模式** | Chromium + WebGPU | 桌面/移动端全功能 UI |
+| **轻量模式** | Skia + Canvas 2D | 嵌入式/ IoT 信息显示 |
+| **无头模式** | V8 + WASM 运行时 | 服务器端渲染 / 自动化 |
+
+应用代码无需修改，系统根据设备性能自动选择渲染模式。
 
 ---
 
@@ -310,16 +408,30 @@ int ai_storage_list(const char *prefix, char **keys, size_t *count);
 
 ## 🗺️ 开发路线图
 
-### 第一阶段：基础架构（1-2 个月）
+### Phase 0: 系统标准化（已完成）
 
-**目标**：实现最小可用系统（MVP）
+| 交付物 | 状态 | 说明 |
+|--------|------|------|
+| [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md) | ✅ | 系统标准架构 v1.0 |
+| [SPEC-INTERFACE.md](SPEC-INTERFACE.md) | ✅ | SSI 接口详细规范 |
+| [specs/component-model.md](specs/component-model.md) | ✅ | 标准组件模型 |
+| [specs/ipc.md](specs/ipc.md) | ✅ | IPC 总线协议 |
+| [specs/wasm-runtime.md](specs/wasm-runtime.md) | ✅ | WASM 运行时规范 |
+| [specs/security.md](specs/security.md) | ✅ | 安全模型规范 |
+
+### Phase 1: 基础架构（1-2 个月）
+
+**目标**：实现最小可用系统（MVP），所有组件基于 SSI 标准
 
 | 任务 | 难度 | 产出 |
 |------|------|------|
-| 编写架构文档 | ⭐ | AI-TP-OS-Architecture.md |
-| 实现存储抽象层 (libai-storage) | ⭐⭐ | C 库 |
-| 实现 NAT 穿透工具 (ai-tp-nat) | ⭐⭐ | Rust 工具 |
-| 实现节点发现 (ai-tp-discovery) | ⭐⭐⭐ | Rust 库 |
+| 编写架构文档 | ⭐ | AI-TP-OS-Architecture.md, SYSTEM-STANDARD.md |
+| 实现标准化 SSI 总线 | ⭐⭐⭐ | IPC 总线核心 + 注册中心 |
+| 实现存储抽象层 (SSI-DB) | ⭐⭐ | libai-storage 标准化 |
+| 实现 NAT 穿透工具 (SSI-NET) | ⭐⭐ | ai-tp-nat |
+| 实现节点发现 (SSI-NET) | ⭐⭐⭐ | ai-tp-discovery |
+| 浏览器引擎集成 (SSI-BR) | ⭐⭐⭐⭐ | browser-engine 组件 |
+| WASM 运行时 (SSI-KRN) | ⭐⭐⭐ | wasm-runtime 组件 |
 
 ### 第二阶段：核心功能（2-3 个月）
 
@@ -329,19 +441,32 @@ int ai_storage_list(const char *prefix, char **keys, size_t *count);
 | 实现 AI 任务调度器 | ⭐⭐⭐ | C + Rust |
 | 实现去中心化寻址 | ⭐⭐⭐⭐ | Rust 库 |
 
-### 第三阶段：系统整合（3-4 个月）
+### Phase 3: 系统整合（3-4 个月）
 
 | 任务 | 难度 | 产出 |
 |------|------|------|
-| 整合网络+存储+计算 | ⭐⭐⭐⭐⭐ | AI-TP OS v0.1 |
+| 整合所有标准组件 | ⭐⭐⭐⭐⭐ | AI-TP OS v0.1 |
+| SSI 一致性测试套件 | ⭐⭐⭐ | 自动化测试报告 |
 | 测试部署（100 节点） | ⭐⭐⭐ | 测试报告 |
-| 优化性能 | ⭐⭐⭐⭐ | 性能报告 |
+| 全平台验证（Browser/Native/Embedded） | ⭐⭐⭐⭐ | 兼容性报告 |
+| 性能优化 | ⭐⭐⭐⭐ | 性能基准测试 |
 
 ---
 
-## 📦 包管理计划 (glibc-packages)
+## 📦 包管理计划 (glibc-packages → .swbn)
 
-为了在 glibc-packages 中支持 AI-TP OS 开发，需要添加以下包：
+为了在 glibc-packages 中支持 AI-TP OS 开发，需要将现有包体系升级为标准化 **.swbn** 组件包：
+
+### 标准化转换
+
+| 传统包 | 标准组件 | SSI 接口 | 状态 |
+|--------|---------|---------|------|
+| `gpkg/zlib` | `zlib.swbn` | SSI-CORE | 示例完成 |
+| `libai-storage` | `storage-engine.swbn` | SSI-DB | 规划中 |
+| `ai-tp-nat` | `network-stack.swbn` | SSI-NET | 规划中 |
+| `ai-tp-discovery` | `network-stack.swbn` | SSI-NET | 规划中 |
+| `browser-runtime` | `browser-engine.swbn` | SSI-BR | 架构设计完成 |
+| `wasm-runtime` | `wasm-runtime.swbn` | SSI-KRN | 架构设计完成 |
 
 ### 网络层包
 

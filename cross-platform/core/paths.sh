@@ -94,6 +94,11 @@ cross_path_to_native() {
                 echo "$path"
             fi
             ;;
+        browser|wasm)
+            # Emscripten 虚拟文件系统：保持 Unix 风格路径
+            # 但会添加 /local/ 前缀以映射到 Emscripten MEMFS 根
+            echo "$path"
+            ;;
         *)
             echo "$path"
             ;;

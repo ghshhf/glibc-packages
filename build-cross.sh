@@ -53,6 +53,8 @@ while (( $# )); do
         --toolchain)   _CROSS_ARG_TOOLCHAIN="$2"; shift 2 ;;
         --src)         _CROSS_ARG_SRCURL="$2";   shift 2 ;;
         --version)     _CROSS_ARG_VERSION="$2";  shift 2 ;;
+        --package-format) CROSS_PACKAGE_FORMAT="$2"; shift 2 ;;
+        --output-format)  export CROSS_OUTPUT_FORMAT="$2"; shift 2 ;;
         -j|--jobs)     _CROSS_ARG_JOBS="$2";     shift 2 ;;
         --clean)       _CROSS_ARG_CLEAN=true;    shift ;;
         --only-configure) _CROSS_ARG_ONLY_STEP="configure"; shift ;;
@@ -294,6 +296,11 @@ for pkg_dir in "${_CROSS_ORDERED[@]}"; do
         cross_step_install      || exit 1
         cross_step_post_install || exit 1
         cross_step_package      || exit 1
+
+        # --- 步骤 7: SSI .swbn 标准组件包（当 --output-format swbn 时） ---
+        if [[ "${CROSS_OUTPUT_FORMAT:-}" == "swbn" ]]; then
+            cross_step_swbn_package || exit 1
+        fi
 
         echo "  ✓ 成功"
     )

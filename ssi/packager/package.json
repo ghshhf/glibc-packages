@@ -1,0 +1,14 @@
+{
+  "name": "@ai-tp-os/swbn-packager",
+  "version": "1.0.0",
+  "description": "SWBN Packager — CLI tool for creating, signing, and verifying .swbn component archives",
+  "main": "src/index.ts",
+  "bin": {
+    "swbn": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "echo 'SWBN packager ready'"
+  },
+  "keywords": ["swbn", "packager", "cli", "ai-tp-os"],
+  "license": "MIT"
+}
