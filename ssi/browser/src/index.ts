@@ -22,6 +22,10 @@ import {
   decodeSsiBufferAsString,
 } from '../../core/src/types';
 
+// Re-export core types used by SSI-BR consumers
+export { SsiErrorCode } from '../../core/src/types';
+export type { SsiRect, SsiBuffer } from '../../core/src/types';
+
 // =========================================================================
 // SSI-BR Types (mirrors SPEC-INTERFACE.md §3)
 // =========================================================================

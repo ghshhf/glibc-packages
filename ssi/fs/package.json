@@ -1,0 +1,7 @@
+{
+  "name": "@skynet/ssi-fs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SkyNet SSI-FS: Virtual File System with multi-backend support",
+  "license": "MIT"
+}

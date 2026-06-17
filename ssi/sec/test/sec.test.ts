@@ -18,7 +18,7 @@ describe('SecurityModule', () => {
       expect(keys).not.toBeNull();
       expect(keys!.publicKey.byteLength).toBeGreaterThan(0);
       expect(keys!.privateKey.byteLength).toBeGreaterThan(0);
-      expect(keys!.algorithm).toBe(SsiCryptoAlgorithm.ED25519);
+      expect(keys!.algorithm).toBe(SsiCryptoAlgorithm.ECDSA_P256);
     });
 
     it('should get public key after generation', async () => {

@@ -12,8 +12,8 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "test": "node dist/test.js",
-    "build:all": "tsc && node scripts/bundle-browser.mjs",
+    "test": "vitest run",
+    "build:all": "tsc",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
@@ -36,7 +36,9 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
-    "typescript": "^5.0.0"
+    "@types/ws": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.9"
   },
   "exports": {
     ".": {

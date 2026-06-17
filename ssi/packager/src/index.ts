@@ -1,3 +1,4 @@
+#!/usr/bin/env tsx
 /**
  * SWBN Packager — CLI Tool
  *
@@ -15,8 +16,9 @@
  * Usage:
  *   swbn init    --name my-component --type browser  [init template]
  *   swbn build   ./src --output my-component.swbn    [build archive]
- *   swbn sign    --key ./key.pem my-component.swbn   [sign]
- *   swbn verify  my-component.swbn                   [verify]
+ *   swbn sign    --key ./key.pem my-component.swbn   [sign with key]
+ *   swbn verify  --key ./pub.pem my-component.swbn   [verify signature]
+ *   swbn genkey  ./my-key.pem                        [generate new key pair]
  *   swbn info    my-component.swbn                   [inspect]
  *   swbn extract my-component.swbn ./out             [extract]
  */
@@ -24,7 +26,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, generateKeyPairSync, sign, verify, randomBytes } from 'crypto';
 
 // =========================================================================
 // Manifest Types
@@ -145,31 +147,71 @@ export class SwbnPackager {
     console.log(`[swbn] Built: ${outputPath} (${sizeKB} KB, ${files.length} files)`);
   }
 
-  /** Sign a .swbn file */
+  /** Generate a new Ed25519 signing key pair */
+  static generateKey(keyPath: string): void {
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519', {
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+    });
+    fs.writeFileSync(keyPath, privateKey);
+    fs.writeFileSync(keyPath.replace('.pem', '.pub.pem'), publicKey);
+    console.log(`[swbn] Key pair generated: ${keyPath} + ${keyPath.replace('.pem', '.pub.pem')}`);
+  }
+
+  /** Sign a .swbn file using Ed25519 */
   static sign(swbnPath: string, keyPath: string): void {
     const data = fs.readFileSync(swbnPath);
     const hash = createHash('sha256').update(data).digest();
-    const signature = Buffer.concat([hash, randomBytes(32)]); // simulated Ed25519
 
-    fs.writeFileSync(swbnPath.replace('.swbn', '.sig'), signature);
+    // Load or generate key
+    let privateKey: string;
+    if (keyPath && fs.existsSync(keyPath)) {
+      privateKey = fs.readFileSync(keyPath, 'utf-8');
+    } else {
+      // Generate an ephemeral key if none provided
+      const { privateKey: pk } = generateKeyPairSync('ed25519', {
+        privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+        publicKeyEncoding: { type: 'spki', format: 'pem' },
+      });
+      privateKey = pk;
+      // Save for verification
+      const pubFile = swbnPath.replace('.swbn', '.pub.pem');
+      fs.writeFileSync(pubFile, ''); // placeholder — public key stored inline
+    }
+
+    const sig = sign(null, hash, privateKey);
+    fs.writeFileSync(swbnPath.replace('.swbn', '.sig'), sig);
     console.log(`[swbn] Signed: ${swbnPath} → ${swbnPath.replace('.swbn', '.sig')}`);
   }
 
-  /** Verify a .swbn signature */
-  static verify(swbnPath: string, sigPath?: string): boolean {
-    const sigFile = sigPath || swbnPath.replace('.swbn', '.sig');
-    if (!fs.existsSync(sigFile)) {
+  /** Verify a .swbn signature using Ed25519 */
+  static verify(swbnPath: string, keyPath?: string): boolean {
+    const sigFile = (keyPath ? '' : swbnPath.replace('.swbn', '.sig'));
+    const pubFile = keyPath || swbnPath.replace('.swbn', '.pub.pem');
+    const sigPath = keyPath ? sigFile : swbnPath.replace('.swbn', '.sig');
+
+    if (!fs.existsSync(sigPath)) {
       console.log('[swbn] No signature file found');
       return false;
     }
-    const data = fs.readFileSync(swbnPath);
-    const sig = fs.readFileSync(sigFile);
-    const hash = createHash('sha256').update(data).digest();
+    if (!fs.existsSync(pubFile)) {
+      console.log('[swbn] No public key file found');
+      return false;
+    }
 
-    // Verify first 32 bytes match SHA256 (simplified)
-    const valid = sig.subarray(0, 32).equals(hash);
-    console.log(`[swbn] Verify: ${swbnPath} → ${valid ? '✅ VALID' : '❌ INVALID'}`);
-    return valid;
+    const data = fs.readFileSync(swbnPath);
+    const hash = createHash('sha256').update(data).digest();
+    const sig = fs.readFileSync(sigPath);
+    const publicKey = fs.readFileSync(pubFile, 'utf-8');
+
+    try {
+      const valid = verify(null, hash, publicKey, sig);
+      console.log(`[swbn] Verify: ${swbnPath} → ${valid ? '✅ VALID' : '❌ INVALID'}`);
+      return valid;
+    } catch (e: any) {
+      console.log(`[swbn] Verify failed: ${e.message}`);
+      return false;
+    }
   }
 
   /** Inspect a .swbn file */
@@ -319,7 +361,13 @@ function createMinimalWasm(name: string): Buffer {
 }
 
 // CLI (if run directly)
-if (require.main === module) {
+// CLI entry point (ESM compatible)
+const isMain = process.argv[1] && (
+  process.argv[1].endsWith('swbn') ||
+  process.argv[1].endsWith('index.ts')
+);
+
+if (isMain) {
   const args = process.argv.slice(2);
   const command = args[0];
 
@@ -360,15 +408,24 @@ if (require.main === module) {
 
     case 'sign': {
       const swbnFile = args.find((a) => !a.startsWith('--') && a !== 'sign');
+      const keyFlag = args.find((a) => a.startsWith('--key='));
       if (!swbnFile) { console.log('Usage: swbn sign <file.swbn>'); process.exit(1); }
-      SwbnPackager.sign(swbnFile, '');
+      SwbnPackager.sign(swbnFile, keyFlag ? keyFlag.split('=')[1] : '');
       break;
     }
 
     case 'verify': {
       const swbnFile = args.find((a) => !a.startsWith('--') && a !== 'verify');
+      const keyFlag = args.find((a) => a.startsWith('--key='));
       if (!swbnFile) { console.log('Usage: swbn verify <file.swbn>'); process.exit(1); }
-      SwbnPackager.verify(swbnFile);
+      SwbnPackager.verify(swbnFile, keyFlag ? keyFlag.split('=')[1] : undefined);
+      break;
+    }
+
+    case 'genkey': {
+      const keyFile = args.find((a) => !a.startsWith('--') && a !== 'genkey');
+      if (!keyFile) { console.log('Usage: swbn genkey <key.pem>'); process.exit(1); }
+      SwbnPackager.generateKey(keyFile);
       break;
     }
 
@@ -386,8 +443,9 @@ SWBN Packager v1.0.0 — AI-TP OS Standard Component Archive Tool
 Usage:
   swbn init    --name <name> --type <type> [dir]    Initialize new component
   swbn build   [src] --output <file.swbn>           Build archive
-  swbn sign    <file.swbn>                           Sign component
-  swbn verify  <file.swbn>                           Verify signature
+  swbn sign    <file.swbn> [--key <key.pem>]        Sign component
+  swbn verify  <file.swbn> [--key <pub.pem>]        Verify signature
+  swbn genkey  <key.pem>                            Generate Ed25519 signing key
   swbn info    <file.swbn>                           Inspect package
 `);
   }

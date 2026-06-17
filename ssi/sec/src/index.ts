@@ -20,8 +20,9 @@ import {
 
 export enum SsiCryptoAlgorithm {
   ED25519 = 0,
-  SECP256K1 = 1,
-  RSA4096 = 2,
+  ECDSA_P256 = 1,
+  SECP256K1 = 2,
+  RSA4096 = 3,
 }
 
 export interface SsiKeyPair {
@@ -81,7 +82,7 @@ export class SecurityModule extends SsiBaseComponent {
       this.keyPair = {
         publicKey: publicKeyRaw,
         privateKey: privateKeyRaw,
-        algorithm: SsiCryptoAlgorithm.ED25519,
+        algorithm: SsiCryptoAlgorithm.ECDSA_P256,
       };
 
       this.log('Identity key pair generated (ECDSA P-256)');

@@ -7,7 +7,7 @@
     "swbn": "./src/index.ts"
   },
   "scripts": {
-    "build": "echo 'SWBN packager ready'"
+    "test": "vitest run --reporter=verbose"
   },
   "keywords": ["swbn", "packager", "cli", "skynet"],
   "license": "MIT"

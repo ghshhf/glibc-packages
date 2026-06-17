@@ -108,7 +108,7 @@ export class StorageEngine extends SsiBaseComponent {
 
     // P2P replication
     if (opts.p2pReplicate) {
-      this.p2pEntriesData(data).catch(() => {});
+      this.p2pStoreData(data).catch(() => {});
     }
 
     return SsiErrorCode.OK;

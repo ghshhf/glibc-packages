@@ -68,6 +68,7 @@
 ├─────────────────────────────────────────────────────────┤
 │   L4: 系统服务层 — 浏览器引擎 / 存储 / 计算 / 网络      │
 │   接口: SSI-BR / SSI-DB / SSI-AI / SSI-NET              │
+│   └─ 🔗 SSI-NET 由 cloudflared/sidecar 提供             │
 ├─────────────────────────────────────────────────────────┤
 │   L3: 内核层 — WASM 运行时 / SSI 总线 / 安全模块        │
 │   接口: SSI-KRN / SSI-SEC                               │
@@ -78,6 +79,8 @@
 │   L1: 物理层 — 手机 / 电脑 / 浏览器 / 服务器 / IoT      │
 └─────────────────────────────────────────────────────────┘
 ```
+
+> 🌐 **免费网络层**：SSI-NET 通过 [cloudflared/sidecar](https://github.com/ghshhf/cloudflared) 提供 18 种传输协议后端，利用 Cloudflare 免费隧道、TCP 直连、P2P、DNS/ICMP 隧道等多种方式实现零成本网络穿透。详见 [docs/SSI-NET.md](docs/SSI-NET.md)。
 
 ---
 
@@ -140,6 +143,7 @@ npx ts-node ssi/packager/src/index.ts info my-app.swbn
 |------|------|-------------|
 | [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md) | 系统架构总纲 — 5 层模型、设计哲学 | 理解 SkyNet 为什么这样设计 |
 | [SPEC-INTERFACE.md](SPEC-INTERFACE.md) | SSI 接口规范 — 12 个接口完整 IDL | 开发符合标准的组件 |
+| [docs/SSI-NET.md](docs/SSI-NET.md) | 网络层架构 — 18 种传输协议 + 智能路由 | 理解 SkyNet 的免费网络层 |
 | [specs/component-model.md](specs/component-model.md) | .swbn 包格式详解 | 打包、签名、验证组件 |
 | [specs/ipc.md](specs/ipc.md) | IPC 总线二进制协议 | 实现跨组件通信 |
 | [specs/security.md](specs/security.md) | 安全模型与权限体系 | 设计安全的组件架构 |
@@ -148,18 +152,20 @@ npx ts-node ssi/packager/src/index.ts info my-app.swbn
 
 ## 🧩 SSI 接口一览
 
-| 接口 | 职责 | 状态 |
-|------|------|------|
-| **SSI-CORE** | 组件生命周期、注册表、消息通信 | ✅ 参考实现完成 |
-| **SSI-BR** | 浏览器渲染、脚本执行、GPU 计算 | ✅ 三模渲染实现 |
-| **SSI-UI** | 窗口管理、合成器、输入路由 | 📝 规范定义 |
-| **SSI-NET** | AI-TP 协议、P2P、NAT 穿透 | 📝 规范定义 |
-| **SSI-DB** | KV 存储、P2P 存储、存储证明 | 📝 规范定义 |
-| **SSI-AI** | AI 任务调度、模型分发、推理 | 📝 规范定义 |
-| **SSI-KRN** | WASM 运行时、进程、内存管理 | ✅ 参考实现完成 |
-| **SSI-FS** | 虚拟文件系统、多后端 | 📝 规范定义 |
-| **SSI-HAL** | 硬件抽象、传感器、电池 | 📝 规范定义 |
-| **SSI-SEC** | 身份、加密、权限、审计 | 📝 规范定义 |
+| 接口 | 职责 | 状态 | 位置 |
+|------|------|------|------|
+| **SSI-CORE** | 组件生命周期、注册表、消息通信 | ✅ 参考实现完成 | `ssi/core/` |
+| **SSI-BR** | 浏览器渲染、脚本执行、GPU 计算 | ✅ 三模渲染实现 | `ssi/browser/` |
+| **SSI-BUS** | 服务总线、二进制 IPC、优先级队列 | ✅ 实现完成 | `ssi/bus/` |
+| **SSI-UI** | 窗口管理、合成器、输入路由 | ✅ 实现完成 | `ssi/ui/` |
+| **SSI-DB** | KV 存储、P2P 存储、存储证明 | ✅ 实现完成 | `ssi/db/` |
+| **SSI-AI** | AI 任务调度、模型分发、推理 | ✅ 实现完成 | `ssi/ai/` |
+| **SSI-SEC** | 身份、加密、权限、审计 | ✅ 实现完成 | `ssi/sec/` |
+| **SSI-HAL** | 硬件抽象、传感器、电池 | ✅ 实现完成 | `ssi/hal/` |
+| **SSI-NET** 🔗 | 免费网络层 — 18 种协议后端 + 智能路由 | ✅ **已在 cloudflared/sidecar 实现** | [ghshhf/cloudflared](https://github.com/ghshhf/cloudflared) → `docs/SSI-NET.md` |
+| **SSI-KRN** | WASM 运行时、进程、内存管理 | ✅ 参考实现完成 | `browser-runtime/` |
+| **PACKAGER** | .swbn 组件打包 CLI | ✅ 实现完成 | `ssi/packager/` |
+| **SSI-FS** | 虚拟文件系统、多后端 | ❌ **尚未实现** | _待开发_ |
 
 ---
 
@@ -181,8 +187,15 @@ SkyNet/
 │   ├── core/                      ← SSI-CORE 组件基座
 │   ├── bus/                       ← SSI 服务总线
 │   ├── browser/                   ← SSI-BR 浏览器引擎
+│   ├── ui/                        ← SSI-UI 窗口系统
+│   ├── ai/                        ← SSI-AI 计算引擎
+│   ├── db/                        ← SSI-DB 存储引擎
+│   ├── hal/                       ← SSI-HAL 硬件抽象
+│   ├── sec/                       ← SSI-SEC 安全模块
+│   ├── fs/                        ← SSI-FS 文件系统（开发中）
 │   ├── packager/                  ← .swbn 打包 CLI
-│   └── demo/                      ← 端到端演示
+│   ├── demo/                      ← 端到端演示
+│   └── demo-component/            ← 组件示例
 │
 ├── 📂 browser-runtime/            ← SSI-KRN 运行时内核
 ├── 📂 desktop/                    ← Windows 安装包源码

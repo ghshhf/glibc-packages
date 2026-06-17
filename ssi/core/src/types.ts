@@ -176,7 +176,22 @@ export interface SsiRegistryEntry {
 // SSI-CORE Utility Functions
 // =========================================================================
 
+export interface SsiInputEvent {
+  type: number;         // 0=mouse, 1=touch, 2=keyboard, 3=gamepad
+  action: number;       // 0=down, 1=up, 2=move, 3=scroll
+  x: number;
+  y: number;
+  button: number;
+  pressure: number;
+  timestamp: number;
+}
+
 export function uuidv4(): UUID {
+  // Use crypto.randomUUID if available (modern browsers, Node.js 19+)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID() as UUID;
+  }
+  // Fallback for older environments
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
     const v = c === 'x' ? r : (r & 0x3) | 0x8;

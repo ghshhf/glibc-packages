@@ -1,0 +1,7 @@
+{
+  "name": "@skynet/ssi-net",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SkyNet SSI-NET: Network Interface Binding for sidecar HTTP API",
+  "license": "MIT"
+}
