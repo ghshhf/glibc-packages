@@ -1,0 +1,223 @@
+<!-- 
+  SkyNet 反馈面板 — 嵌入到 desktop/public/index.html
+  集成方式: 在 dashboard 的 settings 标签页中添加此面板
+-->
+
+<div id="tab-feedback" class="tab-content" style="display:none;">
+  <div class="card">
+    <div class="card-header">
+      <span>📬 反馈与问题报告</span>
+      <span class="header-version">GitHub Issue</span>
+    </div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+
+      <!-- Token 配置 -->
+      <div style="background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:14px;">
+        <div style="font-size:13px;font-weight:600;color:#e6edf3;margin-bottom:8px;">
+          🔑 GitHub Token 配置
+          <span style="font-weight:400;font-size:11px;color:#8b949e;margin-left:8px;">
+            (需要 <code style="background:#21262d;padding:1px 5px;border-radius:3px;">repo</code> 权限)
+          </span>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input id="feedback-token-input" type="password" 
+            style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px;color:#c9d1d9;font-size:13px;font-family:monospace;"
+            placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+          <button id="feedback-save-token" class="btn btn-sm"
+            style="background:#238636;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;white-space:nowrap;">
+            保存
+          </button>
+        </div>
+        <div id="feedback-token-status" style="font-size:11px;color:#8b949e;margin-top:4px;"></div>
+      </div>
+
+      <!-- 问题描述 -->
+      <div style="background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:14px;">
+        <div style="font-size:13px;font-weight:600;color:#e6edf3;margin-bottom:8px;">
+          📝 问题描述
+        </div>
+        <textarea id="feedback-description" rows="4"
+          style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px 12px;color:#c9d1d9;font-size:13px;font-family:inherit;resize:vertical;"
+          placeholder="请描述你遇到的问题或建议...&#10;&#10;示例: &#10;1. 打开应用后仪表盘无法加载&#10;2. SSI 运行时初始化失败&#10;3. 打包 .swbn 组件时出现错误"></textarea>
+      </div>
+
+      <!-- 预览 -->
+      <div style="background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:13px;font-weight:600;color:#e6edf3;">
+            📋 Issue 预览
+          </span>
+          <button id="feedback-refresh-preview" class="btn btn-sm"
+            style="background:#21262d;color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;">
+            刷新预览
+          </button>
+        </div>
+        <pre id="feedback-preview-content"
+          style="background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:12px;font-size:12px;font-family:monospace;color:#8b949e;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;">
+          点击「刷新预览」加载系统信息...
+        </pre>
+      </div>
+
+      <!-- 提交 -->
+      <div style="display:flex;justify-content:flex-end;align-items:center;gap:12px;">
+        <span id="feedback-submit-status" style="font-size:12px;color:#8b949e;"></span>
+        <button id="feedback-submit-btn"
+          style="background:#238636;color:#fff;border:none;border-radius:6px;padding:10px 24px;font-size:14px;font-weight:600;cursor:pointer;">
+          🚀 提交 Issue
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+#tab-feedback .btn:hover { filter: brightness(1.1); }
+#tab-feedback .btn:active { filter: brightness(0.9); }
+#tab-feedback input:focus,
+#tab-feedback textarea:focus { outline: none; border-color: #58a6ff !important; }
+#tab-feedback pre { scrollbar-width: thin; scrollbar-color: #30363d transparent; }
+#tab-feedback pre::-webkit-scrollbar { width: 6px; }
+#tab-feedback pre::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+</style>
+
+<script>
+// =========================================================================
+// 反馈系统 — Renderer 端逻辑
+// =========================================================================
+
+const feedbackElements = {
+  tokenInput: document.getElementById('feedback-token-input'),
+  saveTokenBtn: document.getElementById('feedback-save-token'),
+  tokenStatus: document.getElementById('feedback-token-status'),
+  description: document.getElementById('feedback-description'),
+  refreshPreview: document.getElementById('feedback-refresh-preview'),
+  previewContent: document.getElementById('feedback-preview-content'),
+  submitBtn: document.getElementById('feedback-submit-btn'),
+  submitStatus: document.getElementById('feedback-submit-status'),
+};
+
+// 缓存预览数据
+let cachedPreview = { systemInfo: {}, logs: '' };
+
+// ── 加载 Token ──
+async function loadToken() {
+  if (!window.skynet) return;
+  const token = await window.skynet.invoke('feedback-get-token');
+  if (token) {
+    feedbackElements.tokenInput.value = token;
+    feedbackElements.tokenStatus.textContent = '✅ Token 已配置';
+    feedbackElements.tokenStatus.style.color = '#3fb950';
+  } else {
+    feedbackElements.tokenStatus.textContent = '⚠️ 未配置 Token，提交前需设置';
+    feedbackElements.tokenStatus.style.color = '#d29922';
+  }
+}
+
+// ── 保存 Token ──
+feedbackElements.saveTokenBtn.addEventListener('click', async () => {
+  const token = feedbackElements.tokenInput.value.trim();
+  if (!token) {
+    feedbackElements.tokenStatus.textContent = '❌ Token 不能为空';
+    feedbackElements.tokenStatus.style.color = '#f85149';
+    return;
+  }
+  if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+    feedbackElements.tokenStatus.textContent = '⚠️ Token 格式可能不正确（应以 ghp_ 或 github_pat_ 开头）';
+    feedbackElements.tokenStatus.style.color = '#d29922';
+  }
+
+  const result = await window.skynet.invoke('feedback-save-token', token);
+  if (result) {
+    feedbackElements.tokenStatus.textContent = '✅ Token 已保存（仅本地存储）';
+    feedbackElements.tokenStatus.style.color = '#3fb950';
+  } else {
+    feedbackElements.tokenStatus.textContent = '❌ Token 保存失败';
+    feedbackElements.tokenStatus.style.color = '#f85149';
+  }
+});
+
+// ── 刷新预览 ──
+async function refreshPreview() {
+  if (!window.skynet) return;
+  feedbackElements.previewContent.textContent = '正在收集系统信息...';
+  feedbackElements.previewContent.style.color = '#8b949e';
+
+  try {
+    cachedPreview = await window.skynet.invoke('feedback-preview');
+    const sysInfo = cachedPreview.systemInfo;
+    const logs = cachedPreview.logs;
+
+    // 构建预览文本
+    const lines = ['## 环境信息', ''];
+    for (const [key, value] of Object.entries(sysInfo)) {
+      lines.push(`- **${key}**: ${value}`);
+    }
+    lines.push('', '---', '', '## 日志', '');
+    lines.push('```log');
+    lines.push(logs.slice(0, 2000)); // 预览最多显示 2000 字符
+    if (logs.length > 2000) lines.push('（预览截断，提交时将包含完整日志）');
+    lines.push('```');
+    lines.push('', '---', '', '## 用户描述', '');
+    lines.push(feedbackElements.description.value || '（待填写）');
+
+    feedbackElements.previewContent.textContent = lines.join('\n');
+    feedbackElements.previewContent.style.color = '#c9d1d9';
+  } catch (err) {
+    feedbackElements.previewContent.textContent = `❌ 收集信息失败: ${err.message}`;
+    feedbackElements.previewContent.style.color = '#f85149';
+  }
+}
+
+feedbackElements.refreshPreview.addEventListener('click', refreshPreview);
+
+// ── 提交 Issue ──
+feedbackElements.submitBtn.addEventListener('click', async () => {
+  const description = feedbackElements.description.value.trim();
+  if (!description) {
+    feedbackElements.submitStatus.textContent = '⚠️ 请填写问题描述';
+    feedbackElements.submitStatus.style.color = '#d29922';
+    return;
+  }
+
+  // 确认对话框
+  if (!confirm('即将在 GitHub 上创建一个公开 Issue。\nIssue 将对所有人可见，确认提交？')) {
+    return;
+  }
+
+  feedbackElements.submitBtn.disabled = true;
+  feedbackElements.submitBtn.textContent = '⏳ 提交中...';
+  feedbackElements.submitStatus.textContent = '正在创建 GitHub Issue...';
+  feedbackElements.submitStatus.style.color = '#58a6ff';
+
+  try {
+    const title = `[SkyNet] ${description.slice(0, 72)}${description.length > 72 ? '…' : ''}`;
+    const result = await window.skynet.invoke('feedback-submit', {
+      title,
+      description,
+      systemInfo: cachedPreview.systemInfo,
+      logs: cachedPreview.logs,
+    });
+
+    if (result.success) {
+      feedbackElements.submitStatus.innerHTML = `✅ Issue #${result.issueNumber} 已创建 → <a href="${result.issueUrl}" target="_blank" style="color:#58a6ff;">在 GitHub 查看</a>`;
+      feedbackElements.submitStatus.style.color = '#3fb950';
+      feedbackElements.description.value = '';
+    } else {
+      feedbackElements.submitStatus.textContent = `❌ 创建失败: ${result.error}`;
+      feedbackElements.submitStatus.style.color = '#f85149';
+    }
+  } catch (err) {
+    feedbackElements.submitStatus.textContent = `❌ 提交异常: ${err.message}`;
+    feedbackElements.submitStatus.style.color = '#f85149';
+  } finally {
+    feedbackElements.submitBtn.disabled = false;
+    feedbackElements.submitBtn.textContent = '🚀 提交 Issue';
+  }
+});
+
+// ── 自动加载 ──
+if (feedbackElements.tokenInput) {
+  setTimeout(loadToken, 500);
+}
+</script>

@@ -1,11 +1,29 @@
 /**
- * SSI-FS: Virtual File System Interface
+ * SSI-FS: Virtual File System Interface — 集成入口
  *
- * Implements the IFileSystem interface from SPEC-INTERFACE.md §9.
- * Provides file operations with multi-backend support.
+ * 实现 SPEC-INTERFACE.md §9 定义的 IFileSystem 接口。
+ * 提供多后端虚拟文件系统，支持挂载/卸载不同后端。
  *
  * SSI Interfaces implemented:
- *   - SSI-FS: Virtual file system with MEMFS, NODEFS, OPFS, IDBFS backends
+ *   - SSI-FS: Virtual file system
+ *
+ * 可用后端:
+ *   MEMFS  — 内存文件系统（快速、非持久）
+ *   NODEFS — Node.js 原生 fs 桥接（宿主机访问）
+ *   OPFS   — 浏览器 Origin Private File System（持久化）
+ *
+ * 使用方法:
+ *   const fs = new FileSystem();
+ *   await fs.init({});
+ *   await fs.start();
+ *
+ *   // 挂载 NODEFS 后端到 /host
+ *   const nodeFs = new NodeFsBackend('/var/data');
+ *   fs.mount('/host', nodeFs);
+ *
+ *   // 使用虚拟文件系统
+ *   fs.open('/host/config.json', O_RDONLY);
+ */
  */
 
 import {
@@ -21,9 +39,16 @@ import {
   MemFsBackend,
 } from './backends';
 
-export { SsiFsBackend, SsiFileStat, SsiDirEntry, MemFsBackend } from './backends';
+export {
+  SsiFsBackend, SsiFileStat, SsiDirEntry, MemFsBackend,
+} from './backends';
+export { NodeFsBackend } from './nodefs';
+export { OpfsBackend } from './opfs';
 export { SsiErrorCode } from '../../core/src/index';
-export { O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_TRUNC, O_APPEND, SEEK_SET, SEEK_CUR, SEEK_END } from './backends';
+export {
+  O_RDONLY, O_WRONLY, O_RDWR, O_CREAT, O_TRUNC, O_APPEND,
+  SEEK_SET, SEEK_CUR, SEEK_END,
+} from './backends';
 
 // =========================================================================
 // SSI-FS Mount Entry
@@ -209,37 +234,7 @@ export class FileSystem extends SsiBaseComponent {
     return SsiErrorCode.NOT_SUPPORTED;
   }
 
-  // =========================================================================
-  // Lifecycle Hooks
-  // =========================================================================
-
-  protected async onInit(_config: SsiComponentConfig): Promise<void> {
-    this.defaultBackend.init({});
-    this.log('FileSystem initializing');
-  }
-
-  protected async onStart(): Promise<void> {
-    this.log('FileSystem started');
-  }
-
-  protected async onStop(): Promise<void> {
-    for (const mount of this.mounts) {
-      mount.backend.destroy();
-    }
-    this.mounts = [];
-    this.defaultBackend.destroy();
-    this.log('FileSystem stopped');
-  }
-
-  protected onDestroy(): void {
-    for (const mount of this.mounts) {
-      mount.backend.destroy();
-    }
-    this.mounts = [];
-    this.defaultBackend.destroy();
-  }
-
-  // =========================================================================
+  // ==================================================================  // =========================================================================
   // Internal
   // =========================================================================
 
