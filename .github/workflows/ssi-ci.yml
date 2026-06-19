@@ -38,7 +38,7 @@ jobs:
       # ── SSI Framework ──
       - name: Install SSI dependencies
         working-directory: ssi
-        run: npm ci
+        run: npm install
 
       - name: Type-check SSI
         working-directory: ssi
@@ -84,7 +84,7 @@ jobs:
 
       - name: Install SSI dependencies
         working-directory: ssi
-        run: npm ci
+        run: npm install
 
       - name: Lint check (tsc strict)
         working-directory: ssi
