@@ -14,9 +14,10 @@ import {
   SsiComponentConfig,
   SsiErrorCode,
   SsiRect,
-  SsiInputEvent,
   uuidv4,
 } from '../../core/src/index';
+
+import type { SsiInputEvent } from '../../core/src/index';
 
 // =========================================================================
 // SSI-UI Data Structures
@@ -93,7 +94,7 @@ export enum SsiInputType {
   GAMEPAD = 3,
 }
 
-export { SsiInputEvent };
+export type { SsiInputEvent } from '../../core/src/index';
 
 // =========================================================================
 // Window Manager — SSI-UI Implementation

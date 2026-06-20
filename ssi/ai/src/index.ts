@@ -122,9 +122,10 @@ export class ComputeEngine extends SsiBaseComponent {
     if (task.status === SsiAiTaskStatus.COMPLETED || task.status === SsiAiTaskStatus.CANCELLED) {
       return SsiErrorCode.BUSY;
     }
+    const wasRunning = task.status === SsiAiTaskStatus.RUNNING;
     task.status = SsiAiTaskStatus.CANCELLED;
     task.completedAt = Date.now();
-    if (task.status === SsiAiTaskStatus.RUNNING) {
+    if (wasRunning) {
       this.runningTasks--;
     }
     this.log(`Task cancelled: ${taskId}`);

@@ -37,9 +37,8 @@ import {
   MemFsBackend,
 } from './backends';
 
-export {
-  SsiFsBackend, SsiFileStat, SsiDirEntry, MemFsBackend,
-} from './backends';
+export type { SsiFsBackend, SsiFileStat, SsiDirEntry } from './backends';
+export { MemFsBackend } from './backends';
 export { NodeFsBackend } from './nodefs';
 export { OpfsBackend } from './opfs';
 export { SsiErrorCode } from '../../core/src/index';

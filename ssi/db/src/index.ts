@@ -348,11 +348,13 @@ export class StorageEngine extends SsiBaseComponent {
 
   private normalizeBuffer(data: ArrayBuffer | Uint8Array | string): ArrayBuffer {
     if (typeof data === 'string') {
-      return new TextEncoder().encode(data).buffer;
+      return new TextEncoder().encode(data).buffer as ArrayBuffer;
     }
     if (data instanceof Uint8Array) {
-      return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+      // Always produce a fresh ArrayBuffer copy (handles SharedArrayBuffer safely)
+      return new Uint8Array(data).buffer as ArrayBuffer;
     }
+    // data is ArrayBuffer – return a copy
     return data.slice(0);
   }
 
