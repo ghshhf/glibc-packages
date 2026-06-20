@@ -203,6 +203,9 @@ describe('NodeFsBackend', () => {
     backend.open('/old.txt', O_CREAT | O_RDWR);
     backend.close(3);
 
+    console.log('[DEBUG] testRoot:', testRoot);
+    console.log('[DEBUG] old.txt exists:', fs.existsSync(path.join(testRoot, 'old.txt')));
+    console.log('[DEBUG] rename result:', backend.rename('/old.txt', '/new.txt'));
     expect(backend.rename('/old.txt', '/new.txt')).toBe(SsiErrorCode.OK);
     expect(fs.existsSync(path.join(testRoot, 'old.txt'))).toBe(false);
     expect(fs.existsSync(path.join(testRoot, 'new.txt'))).toBe(true);
@@ -220,9 +223,9 @@ describe('NodeFsBackend Security', () => {
     backend.init({ root: testRoot });
 
     // 尝试逃逸到 /etc
-    expect(() => {
-      backend.stat('/../../../etc/passwd');
-    }).toThrow();
+    const result = backend.stat('/../../../etc/passwd');
+    expect(result.error).toBe(SsiErrorCode.NOT_FOUND);
+
 
     backend.destroy();
     cleanDir(testRoot);

@@ -115,10 +115,12 @@ export class NodeFsBackend implements SsiFsBackend {
     if (typeof config.cwd === 'string') {
       this.cwd = config.cwd;
     }
-    // 确保根目录存在
+        // 确保根目录存在
     try {
-      if (!fs.existsSync(this.resolvePath('/'))) {
-        fs.mkdirSync(this.resolvePath('/'), { recursive: true });
+      const rootPath = this.resolvePath('/');
+      if (rootPath === null) return SsiErrorCode.PERMISSION;
+      if (!fs.existsSync(rootPath)) {
+        fs.mkdirSync(rootPath, { recursive: true });
       }
     } catch {
       return SsiErrorCode.PERMISSION;
@@ -140,15 +142,20 @@ export class NodeFsBackend implements SsiFsBackend {
 
   open(filePath: string, flags: number): SsiErrorCode {
     const absPath = this.resolvePath(filePath);
-    const nodeFlag = flagsToNodeFlag(flags);
+    if (absPath === null) return SsiErrorCode.NOT_FOUND;
 
     try {
-      // 检查文件是否存在（当不指定 O_CREAT 时）
-      if (!(flags & O_CREAT) && !fs.existsSync(absPath)) {
-        return SsiErrorCode.NOT_FOUND;
-      }
+      // 构建 Node.js  flags
+      let nodeFlags = 0;
+      const accessMode = flags & 3;
+      if (accessMode === O_RDONLY) nodeFlags |= fs.constants.O_RDONLY;
+      if (accessMode === O_WRONLY) nodeFlags |= fs.constants.O_WRONLY;
+      if (accessMode === O_RDWR) nodeFlags |= fs.constants.O_RDWR;
+      if (flags & O_CREAT) nodeFlags |= fs.constants.O_CREAT;
+      if (flags & O_TRUNC) nodeFlags |= fs.constants.O_TRUNC;
+      if (flags & O_APPEND) nodeFlags |= fs.constants.O_APPEND;
 
-      const realFd = fs.openSync(absPath, nodeFlag);
+      const realFd = fs.openSync(absPath, nodeFlags, 0o644);
       const stat = fs.fstatSync(realFd);
       const fd = this.nextFd++;
 
@@ -272,6 +279,8 @@ export class NodeFsBackend implements SsiFsBackend {
 
   stat(filePath: string): { stat: SsiFileStat | null; error: SsiErrorCode } {
     const absPath = this.resolvePath(filePath);
+    if (absPath === null) return { stat: null, error: SsiErrorCode.NOT_FOUND };
+
 
     try {
       const st = fs.statSync(absPath);
@@ -295,6 +304,8 @@ export class NodeFsBackend implements SsiFsBackend {
 
   mkdir(filePath: string, mode: number): SsiErrorCode {
     const absPath = this.resolvePath(filePath);
+    if (absPath === null) return SsiErrorCode.NOT_FOUND;
+
 
     try {
       fs.mkdirSync(absPath, { recursive: true, mode });
@@ -308,8 +319,9 @@ export class NodeFsBackend implements SsiFsBackend {
     }
   }
 
-  readdir(filePath: string): { entries: SsiDirEntry[]; error: SsiErrorCode } {
+  readdir(filePath: string): { entries: SsiDirEntry[] | null; error: SsiErrorCode } {
     const absPath = this.resolvePath(filePath);
+    if (absPath === null) return { entries: null, error: SsiErrorCode.NOT_FOUND };
 
     try {
       const names = fs.readdirSync(absPath);
@@ -340,6 +352,8 @@ export class NodeFsBackend implements SsiFsBackend {
 
   unlink(filePath: string): SsiErrorCode {
     const absPath = this.resolvePath(filePath);
+    if (absPath === null) return SsiErrorCode.NOT_FOUND;
+
 
     try {
       const st = fs.statSync(absPath);
@@ -360,7 +374,9 @@ export class NodeFsBackend implements SsiFsBackend {
 
   rename(oldPath: string, newPath: string): SsiErrorCode {
     const absOld = this.resolvePath(oldPath);
+    if (absOld === null) return SsiErrorCode.NOT_FOUND;
     const absNew = this.resolvePath(newPath);
+    if (absNew === null) return SsiErrorCode.NOT_FOUND;
 
     try {
       fs.renameSync(absOld, absNew);
@@ -386,14 +402,14 @@ export class NodeFsBackend implements SsiFsBackend {
    *   - 所有路径在 root 下
    *   - 禁止 path traversal (../ 逃逸)
    */
-  private resolvePath(ssiPath: string): string {
+  private resolvePath(ssiPath: string): string | null {
     // 拼接 root 和路径，然后规范化
     const joined = path.join(this.root, ssiPath);
     const resolved = path.resolve(joined);
 
     // 安全校验：确保解析后的路径在 root 下
     if (!resolved.startsWith(path.resolve(this.root))) {
-      return "";
+      return null;
     }
 
     return resolved;

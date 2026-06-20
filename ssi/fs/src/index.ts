@@ -142,7 +142,7 @@ export class FileSystem extends SsiBaseComponent {
   }
 
   /** Read directory contents */
-  readdir(path: string): { entries: SsiDirEntry[]; error: SsiErrorCode } {
+  readdir(path: string): { entries: SsiDirEntry[] | null; error: SsiErrorCode } {
     const { backend, relPath } = this.resolveBackend(path);
     return backend.readdir(relPath);
   }

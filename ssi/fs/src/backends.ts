@@ -28,7 +28,7 @@ export interface SsiFsBackend {
   // Directory & metadata
   stat(path: string): { stat: SsiFileStat | null; error: SsiErrorCode };
   mkdir(path: string, mode: number): SsiErrorCode;
-  readdir(path: string): { entries: SsiDirEntry[]; error: SsiErrorCode };
+  readdir(path: string): { entries: SsiDirEntry[] | null; error: SsiErrorCode };
   unlink(path: string): SsiErrorCode;
   rename(oldPath: string, newPath: string): SsiErrorCode;
 
@@ -239,7 +239,7 @@ export class MemFsBackend implements SsiFsBackend {
     return SsiErrorCode.OK;
   }
 
-  readdir(path: string): { entries: SsiDirEntry[]; error: SsiErrorCode } {
+  readdir(path: string): { entries: SsiDirEntry[] | null; error: SsiErrorCode } {
     const node = this.resolveNode(this.normalize(path));
     if (!node || !node.isDirectory) return { entries: [], error: SsiErrorCode.NOT_FOUND };
 
@@ -371,3 +371,4 @@ export class MemFsBackend implements SsiFsBackend {
     };
   }
 }
+export { SsiErrorCode } from '../../core/src/index';
