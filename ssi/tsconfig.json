@@ -15,6 +15,6 @@
     "isolatedModules": true,
     "types": ["node"]
   },
-  "include": ["core/src/**/*.ts", "bus/src/**/*.ts", "browser/src/**/*.ts", "packager/src/**/*.ts", "demo/**/*.ts", "ai/src/**/*.ts", "ui/src/**/*.ts", "db/src/**/*.ts", "hal/src/**/*.ts", "sec/src/**/*.ts", "fs/src/**/*.ts", "net/src/**/*.ts"],
+  "include": ["core/src/**/*.ts", "bus/src/**/*.ts", "browser/src/**/*.ts", "packager/src/**/*.ts", "demo/**/*.ts", "ai/src/**/*.ts", "ui/src/**/*.ts", "db/src/**/*.ts", "hal/src/**/*.ts", "sec/src/**/*.ts", "fs/src/**/*.ts", "net/src/**/*.ts", "types/**/*.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

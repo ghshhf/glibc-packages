@@ -1,8 +1,10 @@
 {
   "type": "module",
   "dependencies": {},
+  "optionalDependencies": {
+    "@rolldown/binding-linux-x64-gnu": "1.0.3"
+  },
   "devDependencies": {
-    "@rolldown/binding-linux-x64-gnu": "1.0.3",
     "@types/node": "^25.9.3",
     "typescript": "^5.7.3",
     "vitest": "^4.1.9"

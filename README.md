@@ -165,7 +165,7 @@ npx ts-node ssi/packager/src/index.ts info my-app.swbn
 | **SSI-NET** 🔗 | 免费网络层 — 18 种协议后端 + 智能路由 | ✅ **已在 cloudflared/sidecar 实现** | [ghshhf/cloudflared](https://github.com/ghshhf/cloudflared) → `docs/SSI-NET.md` |
 | **SSI-KRN** | WASM 运行时、进程、内存管理 | ✅ 参考实现完成 | `browser-runtime/` |
 | **PACKAGER** | .swbn 组件打包 CLI | ✅ 实现完成 | `ssi/packager/` |
-| **SSI-FS** | 虚拟文件系统、多后端 | ❌ **尚未实现** | _待开发_ |
+| **SSI-FS** | 虚拟文件系统、多后端 | ✅ 实现完成| `ssi/fs/` |
 
 ---
 
@@ -192,7 +192,7 @@ SkyNet/
 │   ├── db/                        ← SSI-DB 存储引擎
 │   ├── hal/                       ← SSI-HAL 硬件抽象
 │   ├── sec/                       ← SSI-SEC 安全模块
-│   ├── fs/                        ← SSI-FS 文件系统（开发中）
+│   ├── fs/                        ← SSI-FS 文件系统（MEMFS/NODEFS/OPFS 后端）
 │   ├── packager/                  ← .swbn 打包 CLI
 │   ├── demo/                      ← 端到端演示
 │   └── demo-component/            ← 组件示例

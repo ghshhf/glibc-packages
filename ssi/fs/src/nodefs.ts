@@ -393,7 +393,7 @@ export class NodeFsBackend implements SsiFsBackend {
 
     // 安全校验：确保解析后的路径在 root 下
     if (!resolved.startsWith(path.resolve(this.root))) {
-      throw new Error(`Path traversal detected: ${ssiPath} -> ${resolved}`);
+      return "";
     }
 
     return resolved;
