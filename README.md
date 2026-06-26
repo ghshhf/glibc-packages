@@ -80,7 +80,7 @@
 └─────────────────────────────────────────────────────────┘
 ```
 
-> 🌐 **免费网络层**：SSI-NET 通过 [cloudflared/sidecar](https://github.com/ghshhf/cloudflared) 提供 18 种传输协议后端，利用 Cloudflare 免费隧道、TCP 直连、P2P、DNS/ICMP 隧道等多种方式实现零成本网络穿透。详见 [docs/SSI-NET.md](docs/SSI-NET.md)。
+> 🌐 **免费网络层**：SSI-NET 通过 [cloudflared/sidecar](https://github.com/ghshhf/cloudflared) 提供 18 种传输协议后端，利用 Cloudflare 免费隧道、TCP 直连、P2P、DNS/ICMP 隧道等多种方式实现零成本网络穿透。详见 [SSI-NET.md](SSI-NET.md)。
 
 ---
 
@@ -143,7 +143,7 @@ npx ts-node ssi/packager/src/index.ts info my-app.swbn
 |------|------|-------------|
 | [SYSTEM-STANDARD.md](SYSTEM-STANDARD.md) | 系统架构总纲 — 5 层模型、设计哲学 | 理解 SkyNet 为什么这样设计 |
 | [SPEC-INTERFACE.md](SPEC-INTERFACE.md) | SSI 接口规范 — 12 个接口完整 IDL | 开发符合标准的组件 |
-| [docs/SSI-NET.md](docs/SSI-NET.md) | 网络层架构 — 18 种传输协议 + 智能路由 | 理解 SkyNet 的免费网络层 |
+| [SSI-NET.md](SSI-NET.md) | 网络层架构 — 18 种传输协议 + 智能路由 | 理解 SkyNet 的免费网络层 |
 | [specs/component-model.md](specs/component-model.md) | .swbn 包格式详解 | 打包、签名、验证组件 |
 | [specs/ipc.md](specs/ipc.md) | IPC 总线二进制协议 | 实现跨组件通信 |
 | [specs/security.md](specs/security.md) | 安全模型与权限体系 | 设计安全的组件架构 |
@@ -162,10 +162,10 @@ npx ts-node ssi/packager/src/index.ts info my-app.swbn
 | **SSI-AI** | AI 任务调度、模型分发、推理 | ✅ 实现完成 | `ssi/ai/` |
 | **SSI-SEC** | 身份、加密、权限、审计 | ✅ 实现完成 | `ssi/sec/` |
 | **SSI-HAL** | 硬件抽象、传感器、电池 | ✅ 实现完成 | `ssi/hal/` |
-| **SSI-NET** 🔗 | 免费网络层 — 18 种协议后端 + 智能路由 | ✅ **已在 cloudflared/sidecar 实现** | [ghshhf/cloudflared](https://github.com/ghshhf/cloudflared) → `docs/SSI-NET.md` |
+| **SSI-NET** 🔗 | 免费网络层 — 18 种协议后端 + 智能路由 | ✅ **已在 cloudflared/sidecar 实现** | [ghshhf/cloudflared](https://github.com/ghshhf/cloudflared) → `SSI-NET.md` |
 | **SSI-KRN** | WASM 运行时、进程、内存管理 | ✅ 参考实现完成 | `browser-runtime/` |
 | **PACKAGER** | .swbn 组件打包 CLI | ✅ 实现完成 | `ssi/packager/` |
-| **SSI-FS** | 虚拟文件系统、多后端 | ✅ 实现完成| `ssi/fs/` |
+| **SSI-FS** | 虚拟文件系统、多后端（MEMFS/NodeFS/OPFS） | ✅ 参考实现完成 | `ssi/fs/` |
 
 ---
 

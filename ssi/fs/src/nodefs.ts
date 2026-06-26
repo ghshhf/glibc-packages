@@ -70,7 +70,7 @@ function flagsToNodeFlag(flags: number): string {
     if (creat) {
       if (trunc) return 'w+';
       if (append) return 'a+';
-      return 'r+';
+      return 'w+'; // O_RDWR|O_CREAT → 'w+' creates + allows read (Node.js has no non-trunc create+rw)
     }
     return 'r+';
   }
@@ -204,7 +204,7 @@ export class NodeFsBackend implements SsiFsBackend {
         return { data: new ArrayBuffer(0), error: SsiErrorCode.OK };
       }
 
-      return { data: buf.subarray(0, bytesRead).buffer as ArrayBuffer, error: SsiErrorCode.OK };
+      return { data: buf.buffer.slice(0, bytesRead) as ArrayBuffer, error: SsiErrorCode.OK };
     } catch {
       return { data: null, error: SsiErrorCode.GENERIC };
     }
@@ -308,6 +308,7 @@ export class NodeFsBackend implements SsiFsBackend {
 
 
     try {
+      if (fs.existsSync(absPath)) return SsiErrorCode.BUSY;
       fs.mkdirSync(absPath, { recursive: true, mode });
       return SsiErrorCode.OK;
     } catch (err: unknown) {

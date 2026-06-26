@@ -127,20 +127,15 @@ describe('NodeFsBackend', () => {
   });
 
   it('should reject write on read-only fd', () => {
-    backend.open('/ro.txt', O_CREAT | O_RDWR);
+    // 先创建文件，然后关闭，再以只读方式打开
+    const createErr = backend.open('/ro.txt', O_CREAT | O_RDWR);
+    expect(createErr).toBe(SsiErrorCode.OK);
     backend.close(3);
 
-    // NOTE: O_RDONLY fails if file doesn't exist without O_CREAT.
-    // So we open with O_RDONLY on existing file.
-    const roFd = () => {
-      const err = backend.open('/ro.txt', O_RDONLY);
-      return err === SsiErrorCode.OK ? 3 : -1;
-    };
-
-    // Re-open as read-only
-    // The file was opened with fd 3, closed, so next open reuses fd 3
-    backend.open('/ro.txt', O_RDONLY);
-    const writeErr = backend.write(3, new ArrayBuffer(10));
+    // 重新打开为只读（nextFd 已递增，新 fd 为 4）
+    const err = backend.open('/ro.txt', O_RDONLY);
+    expect(err).toBe(SsiErrorCode.OK);
+    const writeErr = backend.write(4, new ArrayBuffer(10));
     expect(writeErr).toBe(SsiErrorCode.PERMISSION);
   });
 
@@ -225,7 +220,6 @@ describe('NodeFsBackend Security', () => {
     // 尝试逃逸到 /etc
     const result = backend.stat('/../../../etc/passwd');
     expect(result.error).toBe(SsiErrorCode.NOT_FOUND);
-
 
     backend.destroy();
     cleanDir(testRoot);

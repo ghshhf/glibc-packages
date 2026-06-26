@@ -1,0 +1,8 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "cd ssi && npm test",
+    "test:watch": "cd ssi && npm run test:watch",
+    "test:browser-runtime": "cd browser-runtime && npm test"
+  }
+}

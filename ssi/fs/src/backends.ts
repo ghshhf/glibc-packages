@@ -9,6 +9,7 @@
  */
 
 import { SsiErrorCode } from '../../core/src/index';
+export { SsiErrorCode };
 
 // =========================================================================
 // Backend Interface
